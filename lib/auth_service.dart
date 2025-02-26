@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'user.dart';
 
 class AuthService {
-  final String baseUrl = 'http://192.168.112.83/api'; // Update based on your setup
+  final String baseUrl = 'https://devjeffrey.dreamhosters.com/api'; // Update based on your setup
 
  Future<User?> login(String email, String password) async {
   try {
