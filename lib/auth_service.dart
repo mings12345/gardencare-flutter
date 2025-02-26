@@ -59,6 +59,7 @@ class AuthService {
     headers: {'Authorization': 'Bearer $token'},
   );
 
+
   print('Response Status Code: ${response.statusCode}'); // Debugging line
   print('Response Body: ${response.body}'); // Debugging line
 
