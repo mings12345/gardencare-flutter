@@ -220,6 +220,7 @@ class _BookingFormState extends State<BookingForm> {
               ),
                 ],
 
+
                 if (selectedType == "Landscaping") ...[
                   SizedBox(height: 20),
                   DropdownButtonFormField<int>(
