@@ -36,29 +36,21 @@ class _BookingFormState extends State<BookingForm> {
   }
 
   Future<void> fetchGardeners() async {
-  try {
-    final response = await http.get(
-      Uri.parse('https://devjeffrey.dreamhosters.com/gardeners'),
-      headers: {"Accept": "application/json"},
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('https://devjeffrey.dreamhosters.com/gardeners'),
+        headers: {"Accept": "application/json"},
+      );
 
-    print('Fetch Gardeners Response: ${response.statusCode}'); // Debugging line
-    print('Fetch Gardeners Body: ${response.body}'); // Debugging line
-
-    if (response.statusCode == 200) {
-      setState(() {
-        gardeners = List<Map<String, dynamic>>.from(jsonDecode(response.body));
-      });
-    } else {
-      throw Exception('Failed to load gardeners: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        setState(() {
+          gardeners = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        });
+      }
+    } catch (e) {
+      print("Error fetching gardeners: $e");
     }
-  } catch (e) {
-    print("Error fetching gardeners: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to fetch gardeners: $e")),
-    );
   }
-}
 
   Future<void> fetchServices() async {
     try {
@@ -199,27 +191,23 @@ class _BookingFormState extends State<BookingForm> {
                 if (selectedType == "Gardening") ...[
                   SizedBox(height: 20),
                   DropdownButtonFormField<int>(
-                value: selectedGardenerId,
-                onChanged: (value) {
-                  print("Selected Gardener ID: $value"); // Debugging line
-                  setState(() => selectedGardenerId = value);
-                },
-                items: gardeners.map<DropdownMenuItem<int>>((gardener) {
-                  return DropdownMenuItem<int>(
-                    value: gardener["id"],
-                    child: Text(gardener["name"]),
-                  );
-                }).toList(),
-                decoration: InputDecoration(
-                  labelText: "Select Gardener",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+                    value: selectedGardenerId,
+                    onChanged: (value) => setState(() => selectedGardenerId = value),
+                    items: gardeners.map<DropdownMenuItem<int>>((gardener) {
+                      return DropdownMenuItem<int>(
+                        value: gardener["id"],
+                        child: Text(gardener["name"]),
+                      );
+                    }).toList(),
+                    decoration: InputDecoration(
+                      labelText: "Select Gardener",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    validator: (value) => value == null ? "Select a gardener" : null,
                   ),
-                ),
-                validator: (value) => value == null ? "Select a gardener" : null,
-              ),
                 ],
-
 
                 if (selectedType == "Landscaping") ...[
                   SizedBox(height: 20),
