@@ -38,7 +38,7 @@ class _BookingFormState extends State<BookingForm> {
   Future<void> fetchGardeners() async {
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.112.83/api/gardeners'),
+        Uri.parse('https://devjeffrey.dreamhosters.com/gardeners'),
         headers: {"Accept": "application/json"},
       );
 
@@ -55,7 +55,7 @@ class _BookingFormState extends State<BookingForm> {
   Future<void> fetchServices() async {
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.112.83/api/services'),
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/services'),
         headers: {"Accept": "application/json"},
       );
 
@@ -73,7 +73,7 @@ class _BookingFormState extends State<BookingForm> {
   Future<void> fetchServiceProviders() async {
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.112.83/api/service_providers'),
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/service_providers'),
         headers: {"Accept": "application/json"},
       );
 
@@ -130,7 +130,7 @@ class _BookingFormState extends State<BookingForm> {
     }
 
     final response = await http.post(
-      Uri.parse('http://192.168.112.83/api/create_booking'),
+      Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
