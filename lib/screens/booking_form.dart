@@ -191,23 +191,27 @@ class _BookingFormState extends State<BookingForm> {
                 if (selectedType == "Gardening") ...[
                   SizedBox(height: 20),
                   DropdownButtonFormField<int>(
-                    value: selectedGardenerId,
-                    onChanged: (value) => setState(() => selectedGardenerId = value),
-                    items: gardeners.map<DropdownMenuItem<int>>((gardener) {
-                      return DropdownMenuItem<int>(
-                        value: gardener["id"],
-                        child: Text(gardener["name"]),
-                      );
-                    }).toList(),
-                    decoration: InputDecoration(
-                      labelText: "Select Gardener",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
+                  value: selectedGardenerId,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedGardenerId = value; // Ensure this is updating
+                    });
+                  },
+                  items: gardeners.map<DropdownMenuItem<int>>((gardener) {
+                    return DropdownMenuItem<int>(
+                      value: gardener["id"],
+                      child: Text(gardener["name"]),
+                    );
+                  }).toList(),
+                  decoration: InputDecoration(
+                    labelText: "Select Gardener",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
                     ),
-                    validator: (value) => value == null ? "Select a gardener" : null,
                   ),
-                ],
+                  validator: (value) => value == null ? "Select a gardener" : null,
+                ),
+                                ],
 
                 if (selectedType == "Landscaping") ...[
                   SizedBox(height: 20),
