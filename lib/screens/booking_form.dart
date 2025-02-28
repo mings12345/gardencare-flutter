@@ -38,7 +38,7 @@ class _BookingFormState extends State<BookingForm> {
   Future<void> fetchGardeners() async {
     try {
       final response = await http.get(
-        Uri.parse('https://devjeffrey.dreamhosters.com/gardeners'),
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/gardeners'),
         headers: {"Accept": "application/json"},
       );
 

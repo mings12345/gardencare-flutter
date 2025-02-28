@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart'; // Import the BookingProvider
 
@@ -27,6 +28,16 @@ class BookingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text("Booking Details"),
         backgroundColor: Colors.green,
+        leading: IconButton(
+        icon: Icon(Icons.arrow_back),
+        onPressed: () {
+          // Replace the current screen with the homeowner screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomeownerScreen(name: '', email: '', address: '', phone: '',)),
+          );
+        },
+      ),
       ),
       body: ListView.builder(
         itemCount: bookings.length,
