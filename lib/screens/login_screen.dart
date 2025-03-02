@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/screens/admin_dashboard_screen.dart';
 import '../auth_service.dart';
 import 'gardener_dashboard.dart';
 import 'homeowner_screen.dart';
@@ -91,6 +92,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   phone: phone,
                   address: address,
                 )),
+              );
+              break;
+              case 'admin': // Add case for admin
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
               );
               break;
             default:

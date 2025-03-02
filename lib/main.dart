@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
+import 'package:gardencare_app/screens/admin_dashboard_screen.dart';
 import 'package:gardencare_app/screens/gardener_dashboard.dart';
 import 'package:gardencare_app/screens/messaging_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(primarySwatch: Colors.blue),
       initialRoute: '/', // Set the initial route
       routes: {
+        '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/': (context) => const OnboardingScreen(), 
         '/login': (context) => LoginScreen(), // Default screen
         '/profile': (context) => const ProfileScreen(
