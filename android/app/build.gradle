@@ -6,13 +6,14 @@ plugins {
 }
 
 android {
-    namespace = "com.example.gardencare_app"
+    namespace = "com.gardencare"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled = true // Enable core library desugaring
     }
 
     kotlinOptions {
@@ -21,8 +22,8 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.gardencare_app"
-        resValue "string", "applicationName", "com.example.gardencare_app"
+        applicationId = "com.gardencare"
+        resValue "string", "applicationName", "com.gardencare"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -49,3 +50,13 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation 'com.google.firebase:firebase-messaging:21.1.0'
+    implementation("com.pusher:push-notifications-android:1.9.0")
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2' // Add desugaring dependency
+}
+
+apply plugin: 'com.google.gms.google-services' // Keep this line at the bottom

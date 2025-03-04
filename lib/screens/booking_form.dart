@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/services/pusher_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart'; 
@@ -108,62 +109,95 @@ class _BookingFormState extends State<BookingForm> {
     });
   }
 
-  Future<void> submitBooking() async {
-    if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
+      Future<void> submitBooking() async {
+      if (!_formKey.currentState!.validate()) return;
+      _formKey.currentState!.save();
 
-    final Map<String, dynamic> payload = {
-      "type": selectedType,
-      "homeowner_id": 2,
-      "service_ids": selectedServiceIds,
-      "address": address,
-      "date": selectedDate!.toIso8601String(),
-      "time": "${selectedTime!.hour}:${selectedTime!.minute}",
-      "total_price": totalPrice,
-      "special_instructions": specialInstructions ?? "",
-    };
+      final Map<String, dynamic> payload = {
+        "type": selectedType,
+        "homeowner_id": 2,
+        "service_ids": selectedServiceIds,
+        "address": address,
+        "date": selectedDate!.toIso8601String(),
+        "time": "${selectedTime!.hour}:${selectedTime!.minute}",
+        "total_price": totalPrice,
+        "special_instructions": specialInstructions ?? "",
+      };
 
-    if (selectedType == "Gardening") {
-      payload["gardener_id"] = selectedGardenerId;
-    } else if (selectedType == "Landscaping") {
-      payload["serviceprovider_id"] = selectedServiceProviderId;
+      if (selectedType == "Gardening") {
+        payload["gardener_id"] = selectedGardenerId;
+      } else if (selectedType == "Landscaping") {
+        payload["serviceprovider_id"] = selectedServiceProviderId;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer YOUR_ACCESS_TOKEN",
+        },
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Booking Created Successfully!")),
+        );
+
+        // Notify the selected gardener or service provider
+        if (selectedType == "Gardening") {
+          _notifyGardener(selectedGardenerId!);
+        } else if (selectedType == "Landscaping") {
+          _notifyServiceProvider(selectedServiceProviderId!);
+        }
+
+        final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+        bookingProvider.addBooking(payload);
+
+        // Navigate to BookingsScreen with booking details
+        Navigator.pushNamed(
+          context,
+          '/bookings',
+          arguments: payload,
+        );
+      } else {
+        print("Booking Failed: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Booking Failed: ${response.body}")),
+        );
+      }
     }
 
-    final response = await http.post(
-      Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer YOUR_ACCESS_TOKEN",
-      },
-      body: jsonEncode(payload),
-    );
+    void _notifyGardener(int gardenerId) async {
+  final pusherService = PusherService();
+  await pusherService.initPusher(channelName: 'private-gardener.$gardenerId');
 
-    if (response.statusCode == 201) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking Created Successfully!")),
-      );
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-      bookingProvider.addBooking(payload);
-      // Navigate to BookingsScreen with booking details
-      Navigator.pushNamed(
-        context,
-        '/bookings',
-        arguments: payload, // Pass the payload as arguments
-      );
-    } else {
-      print("Booking Failed: ${response.body}");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking Failed: ${response.body}")),
-      );
-    }
-  }
+  // Trigger a Pusher event to notify the gardener
+  await pusherService.triggerEvent(
+    channelName: 'private-gardener.$gardenerId',
+    eventName: 'booking-created',
+    data: {"message": "New booking created!"},
+  );
+}
+
+void _notifyServiceProvider(int serviceProviderId) async {
+  final pusherService = PusherService();
+  await pusherService.initPusher(channelName: 'private-serviceprovider.$serviceProviderId');
+
+  // Trigger a Pusher event to notify the service provider
+  await pusherService.triggerEvent(
+    channelName: 'private-serviceprovider.$serviceProviderId',
+    eventName: 'booking-created',
+    data: {"message": "New booking created!"},
+  );
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Book Service"),
+        title: Text("Reservation Service"),
         backgroundColor: Colors.green, // Gardening theme color
       ),
       body: Padding(

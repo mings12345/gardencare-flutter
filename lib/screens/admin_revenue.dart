@@ -18,4 +18,4 @@ class AdminRevenue extends StatelessWidget {
       ),
     );
   }
-}
+}                                                       

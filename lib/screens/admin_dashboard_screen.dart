@@ -7,6 +7,7 @@ import 'admin_revenue.dart'; // Import Revenue screen
 import 'generate_reports.dart'; // Import Generate Reports screen
 import 'admin_profile.dart'; // Import Profile screen
 
+
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
