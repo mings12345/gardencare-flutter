@@ -170,8 +170,8 @@ class _BookingFormState extends State<BookingForm> {
     }
 
     void _notifyGardener(int gardenerId) async {
-  final pusherService = PusherService();
-  await pusherService.initPusher(channelName: 'private-gardener.$gardenerId');
+  final pusherService = Provider.of<PusherService>(context, listen: false);
+  await pusherService.subscribeToChannel('private-gardener.$gardenerId');
 
   // Trigger a Pusher event to notify the gardener
   await pusherService.triggerEvent(
@@ -182,8 +182,8 @@ class _BookingFormState extends State<BookingForm> {
 }
 
 void _notifyServiceProvider(int serviceProviderId) async {
-  final pusherService = PusherService();
-  await pusherService.initPusher(channelName: 'private-serviceprovider.$serviceProviderId');
+  final pusherService = Provider.of<PusherService>(context, listen: false);
+  await pusherService.subscribeToChannel('private-serviceprovider.$serviceProviderId');
 
   // Trigger a Pusher event to notify the service provider
   await pusherService.triggerEvent(

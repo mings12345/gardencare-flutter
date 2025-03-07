@@ -2,7 +2,14 @@ import 'dart:convert';
 import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 
 class PusherService {
+  static final PusherService _instance = PusherService._internal();
   late PusherChannelsFlutter pusher;
+
+  factory PusherService() {
+    return _instance;
+  }
+
+  PusherService._internal();
 
   Future<void> initPusher({String? channelName}) async {
     pusher = PusherChannelsFlutter.getInstance();
@@ -36,14 +43,18 @@ class PusherService {
       final channel = await pusher.subscribe(channelName: channelName);
       print("✅ Subscribed to channel: $channelName");
 
-      // Listen for events on the channel
-      channel.onEvent!((event) {
-        if (event != null) {
-          print("🔔 Event received: ${event.eventName}, Data: ${event.data}");
-        } else {
-          print("⚠️ Received a null event");
-        }
-      });
+      // Check if onEvent is not null before using it
+      if (channel.onEvent != null) {
+        channel.onEvent!((event) {
+          if (event != null) {
+            print("🔔 Event received: ${event.eventName}, Data: ${event.data}");
+          } else {
+            print("⚠️ Received a null event");
+          }
+        });
+      } else {
+        print("⚠️ onEvent is null for channel: $channelName");
+      }
     } catch (e) {
       print("❌ Error subscribing to channel: $e");
     }

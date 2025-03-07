@@ -14,19 +14,29 @@ import 'screens/bookings_screen.dart';
 import 'screens/gardening_screen.dart';
 import 'screens/homeowner_screen.dart';
 import 'screens/landscaping_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
+  final notificationService = NotificationService();
+  await notificationService.init();
 
   // Initialize Pusher
-  PusherService pusherService = PusherService();
-  await pusherService.initPusher();
-  await pusherService.subscribeToChannel("gardening-updates"); // Replace with your actual channel
+  final pusherService = PusherService();
+  try {
+    await pusherService.initPusher(channelName: "gardening-updates"); // Pass the channel name here
+    print("✅ Pusher initialized and connected successfully!");
+  } catch (e) {
+    print("❌ Error initializing Pusher: $e");
+  }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => BookingProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => BookingProvider()),
+        Provider<PusherService>(create: (_) => pusherService), // Provide PusherService
+      ],
       child: MyApp(),
     ),
   );
