@@ -16,7 +16,7 @@ class PusherService {
 
     try {
       await pusher.init(
-        apiKey: "30c5136a5ba9d5617c54", // Replace with your actual Pusher App Key
+        apiKey: "9b6cf6a0eecc032de3a0", // Replace with your actual Pusher App Key
         cluster: "ap1", // Replace with your Pusher Cluster
         onConnectionStateChange: (currentState, previousState) {
           print("Connection state changed: $currentState");

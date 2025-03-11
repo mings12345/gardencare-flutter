@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 import '../auth_service.dart';
 import '../user.dart';
 import 'login_screen.dart'; // Import your login screen
@@ -27,34 +29,41 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _obscureConfirmPassword = true;
 
   void _register() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      try {
-        User? user = await _authService.register(
-          _nameController.text,
-          _emailController.text,
-          _passwordController.text,
-          _phoneController.text,
-          _addressController.text,
-          widget.userType,
-        );
-        if (user != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Successfully Registered')),
-          );
-          await Future.delayed(const Duration(seconds: 2));
-          
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        }
-      } catch (e) {
+  if (_formKey.currentState?.validate() ?? false) {
+    try {
+      User? user = await _authService.register(
+        _nameController.text,
+        _emailController.text,
+        _passwordController.text,
+        _phoneController.text,
+        _addressController.text,
+        widget.userType,
+        context, // Pass the BuildContext here
+      );
+
+      if (user != null) {
+        // Set the homeownerId in the UserProvider
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        userProvider.setHomeownerId(user.id);
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration error: ${e.toString()}')),
+          const SnackBar(content: Text('Successfully Registered')),
+        );
+
+        await Future.delayed(const Duration(seconds: 2));
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
         );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Registration error: ${e.toString()}')),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'user.dart';
@@ -6,7 +7,11 @@ import 'user.dart';
 class AuthService {
   final String baseUrl = 'https://devjeffrey.dreamhosters.com/api'; // Update based on your setup
 
- Future<User?> login(String email, String password) async {
+ Future<User?> login(
+  String email,
+  String password,
+  BuildContext context
+) async {
   try {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
@@ -79,39 +84,40 @@ class AuthService {
 }
 
   Future<User?> register(
-    String name,
-    String email,
-    String password,
-    String phone,
-    String address,
-    String userType,
-  ) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'password': password,
-          'password_confirmation': password,
-          'phone': phone,
-          'address': address,
-          'user_type': userType,
-        }),
-      );
+  String name,
+  String email,
+  String password,
+  String phone,
+  String address,
+  String userType,
+  BuildContext context
+) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+        'password_confirmation': password,
+        'phone': phone,
+        'address': address,
+        'user_type': userType,
+      }),
+    );
 
-      if (response.statusCode == 201 && response.headers['content-type']?.contains('application/json') == true) {
-        final responseData = jsonDecode(response.body);
-        return User.fromJson(responseData['user']);
-      } else if (response.headers['content-type']?.contains('application/json') == true) {
-        final error = jsonDecode(response.body);
-        throw Exception('Registration failed: ${error['message']}');
-      } else {
-        throw Exception('Unexpected error: ${response.statusCode}');
-      }
-    } catch (e) {
-      rethrow; // Allow the caller to handle the error
+    if (response.statusCode == 201 && response.headers['content-type']?.contains('application/json') == true) {
+      final responseData = jsonDecode(response.body);
+      return User.fromJson(responseData['user']);
+    } else if (response.headers['content-type']?.contains('application/json') == true) {
+      final error = jsonDecode(response.body);
+      throw Exception('Registration failed: ${error['message']}');
+    } else {
+      throw Exception('Unexpected error: ${response.statusCode}');
+    }
+  } catch (e) {
+    rethrow; // Allow the caller to handle the error
     }
   }
 }

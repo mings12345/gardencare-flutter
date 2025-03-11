@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/admin_dashboard_screen.dart';
+import 'package:provider/provider.dart';
 import '../auth_service.dart';
 import 'gardener_dashboard.dart';
 import 'homeowner_screen.dart';
@@ -32,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
       User? user = await _authService.login(
         _emailController.text,
         _passwordController.text,
+        context, // Pass the BuildContext here
       );
 
       if (user != null) {
@@ -49,6 +52,11 @@ class _LoginScreenState extends State<LoginScreen> {
               backgroundColor: Colors.green,
             ),
           );
+
+          // Set the homeownerId in the UserProvider
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          userProvider.setHomeownerId(user.id);
+
           final profileData = await _authService.fetchProfileData(user.id.toString());
 
           // Check for null values in profileData
@@ -94,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 )),
               );
               break;
-              case 'admin': // Add case for admin
+            case 'admin': // Add case for admin
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => AdminDashboardScreen()),

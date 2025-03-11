@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:gardencare_app/services/pusher_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:gardencare_app/providers/booking_provider.dart'; 
+import 'package:gardencare_app/providers/booking_provider.dart';
+import 'package:gardencare_app/providers/user_provider.dart'; // Import UserProvider
 
 class BookingForm extends StatefulWidget {
   @override
@@ -109,89 +110,129 @@ class _BookingFormState extends State<BookingForm> {
     });
   }
 
-      Future<void> submitBooking() async {
-      if (!_formKey.currentState!.validate()) return;
-      _formKey.currentState!.save();
+  Future<void> submitBooking() async {
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
 
-      final Map<String, dynamic> payload = {
-        "type": selectedType,
-        "homeowner_id": 2,
-        "service_ids": selectedServiceIds,
-        "address": address,
-        "date": selectedDate!.toIso8601String(),
-        "time": "${selectedTime!.hour}:${selectedTime!.minute}",
-        "total_price": totalPrice,
-        "special_instructions": specialInstructions ?? "",
-      };
+    // Retrieve the homeownerId from the UserProvider
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final int? homeownerId = userProvider.homeownerId;
 
-      if (selectedType == "Gardening") {
-        payload["gardener_id"] = selectedGardenerId;
-      } else if (selectedType == "Landscaping") {
-        payload["serviceprovider_id"] = selectedServiceProviderId;
-      }
-
-      final response = await http.post(
-        Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": "Bearer YOUR_ACCESS_TOKEN",
-        },
-        body: jsonEncode(payload),
+    // Check if the homeownerId is available
+    if (homeownerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("User not logged in. Please log in to book a service.")),
       );
-
-      if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Booking Created Successfully!")),
-        );
-
-        // Notify the selected gardener or service provider
-        if (selectedType == "Gardening") {
-          _notifyGardener(selectedGardenerId!);
-        } else if (selectedType == "Landscaping") {
-          _notifyServiceProvider(selectedServiceProviderId!);
-        }
-
-        final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-        bookingProvider.addBooking(payload);
-
-        // Navigate to BookingsScreen with booking details
-        Navigator.pushNamed(
-          context,
-          '/bookings',
-          arguments: payload,
-        );
-      } else {
-        print("Booking Failed: ${response.body}");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Booking Failed: ${response.body}")),
-        );
-      }
+      return;
     }
 
-    void _notifyGardener(int gardenerId) async {
-  final pusherService = Provider.of<PusherService>(context, listen: false);
-  await pusherService.subscribeToChannel('private-gardener.$gardenerId');
+    final Map<String, dynamic> payload = {
+      "type": selectedType,
+      "homeowner_id": homeownerId, // Use the homeownerId from UserProvider
+      "service_ids": selectedServiceIds,
+      "address": address,
+      "date": selectedDate!.toIso8601String(),
+      "time": "${selectedTime!.hour}:${selectedTime!.minute}",
+      "total_price": totalPrice,
+      "special_instructions": specialInstructions ?? "",
+    };
 
-  // Trigger a Pusher event to notify the gardener
-  await pusherService.triggerEvent(
-    channelName: 'private-gardener.$gardenerId',
-    eventName: 'booking-created',
-    data: {"message": "New booking created!"},
-  );
-}
+    if (selectedType == "Gardening") {
+      payload["gardener_id"] = selectedGardenerId;
+    } else if (selectedType == "Landscaping") {
+      payload["serviceprovider_id"] = selectedServiceProviderId;
+    }
 
-void _notifyServiceProvider(int serviceProviderId) async {
-  final pusherService = Provider.of<PusherService>(context, listen: false);
-  await pusherService.subscribeToChannel('private-serviceprovider.$serviceProviderId');
+    final response = await http.post(
+      Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer YOUR_ACCESS_TOKEN",
+      },
+      body: jsonEncode(payload),
+    );
 
-  // Trigger a Pusher event to notify the service provider
-  await pusherService.triggerEvent(
-    channelName: 'private-serviceprovider.$serviceProviderId',
-    eventName: 'booking-created',
-    data: {"message": "New booking created!"},
-  );
-}
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Booking Created Successfully!")),
+      );
+
+      // Notify the selected gardener or service provider
+      if (selectedType == "Gardening") {
+        _notifyGardener(selectedGardenerId!);
+      } else if (selectedType == "Landscaping") {
+        _notifyServiceProvider(selectedServiceProviderId!);
+      }
+
+      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+      bookingProvider.addBooking(payload);
+
+      // Navigate to BookingsScreen with booking details
+      Navigator.pushNamed(
+        context,
+        '/bookings',
+        arguments: payload,
+      );
+    } else {
+      print("Booking Failed: ${response.body}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Booking Failed: ${response.body}")),
+      );
+    }
+  }
+
+  void _notifyGardener(int gardenerId) async {
+    final pusherService = Provider.of<PusherService>(context, listen: false);
+
+    // Subscribe to the private channel
+    await pusherService.subscribeToChannel('private-gardener.$gardenerId');
+
+    // Listen for the subscription succeeded event
+    final channel = pusherService.pusher.getChannel('private-gardener.$gardenerId');
+    if (channel != null) {
+      channel.onEvent = (event) {
+        if (event != null && event.eventName == 'pusher:subscription_succeeded') {
+          print("🎉 Subscription succeeded for gardener channel: private-gardener.$gardenerId");
+
+          // Trigger the event after subscription succeeds
+          pusherService.triggerEvent(
+            channelName: 'private-gardener.$gardenerId',
+            eventName: 'booking-created',
+            data: {"message": "New booking created!"},
+          );
+        }
+      };
+    } else {
+      print("❌ Failed to subscribe to gardener channel: private-gardener.$gardenerId");
+    }
+  }
+
+  void _notifyServiceProvider(int serviceProviderId) async {
+    final pusherService = Provider.of<PusherService>(context, listen: false);
+
+    // Subscribe to the private channel
+    await pusherService.subscribeToChannel('private-serviceprovider.$serviceProviderId');
+
+    // Listen for the subscription succeeded event
+    final channel = pusherService.pusher.getChannel('private-serviceprovider.$serviceProviderId');
+    if (channel != null) {
+      channel.onEvent = (event) {
+        if (event != null && event.eventName == 'pusher:subscription_succeeded') {
+          print("🎉 Subscription succeeded for service provider channel: private-serviceprovider.$serviceProviderId");
+
+          // Trigger the event after subscription succeeds
+          pusherService.triggerEvent(
+            channelName: 'private-serviceprovider.$serviceProviderId',
+            eventName: 'booking-created',
+            data: {"message": "New booking created!"},
+          );
+        }
+      };
+    } else {
+      print("❌ Failed to subscribe to service provider channel: private-serviceprovider.$serviceProviderId");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -225,27 +266,27 @@ void _notifyServiceProvider(int serviceProviderId) async {
                 if (selectedType == "Gardening") ...[
                   SizedBox(height: 20),
                   DropdownButtonFormField<int>(
-                  value: selectedGardenerId,
-                  onChanged: (value) {
-                    setState(() {
-                      selectedGardenerId = value; // Ensure this is updating
-                    });
-                  },
-                  items: gardeners.map<DropdownMenuItem<int>>((gardener) {
-                    return DropdownMenuItem<int>(
-                      value: gardener["id"],
-                      child: Text(gardener["name"]),
-                    );
-                  }).toList(),
-                  decoration: InputDecoration(
-                    labelText: "Select Gardener",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
+                    value: selectedGardenerId,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedGardenerId = value; // Ensure this is updating
+                      });
+                    },
+                    items: gardeners.map<DropdownMenuItem<int>>((gardener) {
+                      return DropdownMenuItem<int>(
+                        value: gardener["id"],
+                        child: Text(gardener["name"]),
+                      );
+                    }).toList(),
+                    decoration: InputDecoration(
+                      labelText: "Select Gardener",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
                     ),
+                    validator: (value) => value == null ? "Select a gardener" : null,
                   ),
-                  validator: (value) => value == null ? "Select a gardener" : null,
-                ),
-                                ],
+                ],
 
                 if (selectedType == "Landscaping") ...[
                   SizedBox(height: 20),
