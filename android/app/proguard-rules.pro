@@ -20,3 +20,11 @@
 -keep class com.google.android.play.core.splitcompat.** { *; }
 -keep class com.google.android.play.core.splitinstall.** { *; }
 -keep class com.google.android.play.core.tasks.** { *; }
+
+# Additional rules for Firebase and Pusher
+-keep class com.google.firebase.** { *; }
+-keep class com.pusher.** { *; }
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.firebase.messaging.FirebaseMessagingService { *; }
+-keep class com.google.firebase.messaging.RemoteMessage { *; }
+-keep class com.google.firebase.messaging.RemoteMessage$Notification { *; }

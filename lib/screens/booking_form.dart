@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:gardencare_app/services/pusher_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
-import 'package:gardencare_app/providers/user_provider.dart'; // Import UserProvider
+import 'package:gardencare_app/providers/user_provider.dart';
+import 'package:gardencare_app/services/pusher_service.dart';
 
 class BookingForm extends StatefulWidget {
   @override
@@ -33,7 +33,7 @@ class _BookingFormState extends State<BookingForm> {
   void initState() {
     super.initState();
     fetchGardeners();
-    fetchServices();
+    fetchServices(); // Fetch services when the form is loaded
     fetchServiceProviders();
   }
 
@@ -48,6 +48,8 @@ class _BookingFormState extends State<BookingForm> {
         setState(() {
           gardeners = List<Map<String, dynamic>>.from(jsonDecode(response.body));
         });
+      } else {
+        print("Failed to fetch gardeners: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching gardeners: $e");
@@ -63,9 +65,12 @@ class _BookingFormState extends State<BookingForm> {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
+        print("Fetched Services: $data"); // Debug print
         setState(() {
           services = List<Map<String, dynamic>>.from(data["services"]);
         });
+      } else {
+        print("Failed to fetch services: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching services: $e");
@@ -83,6 +88,8 @@ class _BookingFormState extends State<BookingForm> {
         setState(() {
           serviceProviders = List<Map<String, dynamic>>.from(jsonDecode(response.body));
         });
+      } else {
+        print("Failed to fetch service providers: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching service providers: $e");
@@ -114,11 +121,9 @@ class _BookingFormState extends State<BookingForm> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    // Retrieve the homeownerId from the UserProvider
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final int? homeownerId = userProvider.homeownerId;
 
-    // Check if the homeownerId is available
     if (homeownerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("User not logged in. Please log in to book a service.")),
@@ -128,7 +133,7 @@ class _BookingFormState extends State<BookingForm> {
 
     final Map<String, dynamic> payload = {
       "type": selectedType,
-      "homeowner_id": homeownerId, // Use the homeownerId from UserProvider
+      "homeowner_id": homeownerId,
       "service_ids": selectedServiceIds,
       "address": address,
       "date": selectedDate!.toIso8601String(),
@@ -158,7 +163,6 @@ class _BookingFormState extends State<BookingForm> {
         SnackBar(content: Text("Booking Created Successfully!")),
       );
 
-      // Notify the selected gardener or service provider
       if (selectedType == "Gardening") {
         _notifyGardener(selectedGardenerId!);
       } else if (selectedType == "Landscaping") {
@@ -168,7 +172,6 @@ class _BookingFormState extends State<BookingForm> {
       final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
       bookingProvider.addBooking(payload);
 
-      // Navigate to BookingsScreen with booking details
       Navigator.pushNamed(
         context,
         '/bookings',
@@ -184,18 +187,13 @@ class _BookingFormState extends State<BookingForm> {
 
   void _notifyGardener(int gardenerId) async {
     final pusherService = Provider.of<PusherService>(context, listen: false);
-
-    // Subscribe to the private channel
     await pusherService.subscribeToChannel('private-gardener.$gardenerId');
 
-    // Listen for the subscription succeeded event
     final channel = pusherService.pusher.getChannel('private-gardener.$gardenerId');
     if (channel != null) {
       channel.onEvent = (event) {
         if (event != null && event.eventName == 'pusher:subscription_succeeded') {
           print("🎉 Subscription succeeded for gardener channel: private-gardener.$gardenerId");
-
-          // Trigger the event after subscription succeeds
           pusherService.triggerEvent(
             channelName: 'private-gardener.$gardenerId',
             eventName: 'booking-created',
@@ -210,18 +208,13 @@ class _BookingFormState extends State<BookingForm> {
 
   void _notifyServiceProvider(int serviceProviderId) async {
     final pusherService = Provider.of<PusherService>(context, listen: false);
-
-    // Subscribe to the private channel
     await pusherService.subscribeToChannel('private-serviceprovider.$serviceProviderId');
 
-    // Listen for the subscription succeeded event
     final channel = pusherService.pusher.getChannel('private-serviceprovider.$serviceProviderId');
     if (channel != null) {
       channel.onEvent = (event) {
         if (event != null && event.eventName == 'pusher:subscription_succeeded') {
           print("🎉 Subscription succeeded for service provider channel: private-serviceprovider.$serviceProviderId");
-
-          // Trigger the event after subscription succeeds
           pusherService.triggerEvent(
             channelName: 'private-serviceprovider.$serviceProviderId',
             eventName: 'booking-created',
@@ -239,7 +232,7 @@ class _BookingFormState extends State<BookingForm> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Reservation Service"),
-        backgroundColor: Colors.green, // Gardening theme color
+        backgroundColor: Colors.green,
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -250,7 +243,14 @@ class _BookingFormState extends State<BookingForm> {
               children: [
                 DropdownButtonFormField<String>(
                   value: selectedType,
-                  onChanged: (value) => setState(() => selectedType = value),
+                  onChanged: (value) {
+                    print("Selected Type: $value"); // Debug print
+                    setState(() {
+                      selectedType = value;
+                      selectedServiceIds = []; // Reset selected services when type changes
+                      totalPrice = 0.0; // Reset total price
+                    });
+                  },
                   items: ["Gardening", "Landscaping"]
                       .map((type) => DropdownMenuItem(value: type, child: Text(type)))
                       .toList(),
@@ -269,7 +269,7 @@ class _BookingFormState extends State<BookingForm> {
                     value: selectedGardenerId,
                     onChanged: (value) {
                       setState(() {
-                        selectedGardenerId = value; // Ensure this is updating
+                        selectedGardenerId = value;
                       });
                     },
                     items: gardeners.map<DropdownMenuItem<int>>((gardener) {
@@ -320,7 +320,7 @@ class _BookingFormState extends State<BookingForm> {
                           borderRadius: BorderRadius.circular(10.0),
                         ),
                         child: CheckboxListTile(
-                          title: Text("${service['name']} (₱${service['price']})"), // Updated to ₱
+                          title: Text("${service['name']} (₱${service['price']})"),
                           value: selectedServiceIds.contains(service['id']),
                           onChanged: (bool? value) {
                             setState(() {
@@ -340,7 +340,7 @@ class _BookingFormState extends State<BookingForm> {
 
                 if (selectedType != null) ...[
                   SizedBox(height: 20),
-                  Text("Total Price: ₱${totalPrice.toStringAsFixed(2)}", // Updated to ₱
+                  Text("Total Price: ₱${totalPrice.toStringAsFixed(2)}",
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
 
