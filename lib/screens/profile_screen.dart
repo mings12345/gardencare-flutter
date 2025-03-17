@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart'; 
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class ProfileScreen extends StatefulWidget {
   final String name;
@@ -79,36 +82,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // New method to handle logout
-  void _logout() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                // Add your logout logic here
-                Navigator.of(context).pop(); // Close the dialog
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                ); // Navigate to the HomeownerScreen
-              },
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  void _logout() async {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Get the authentication token
+              final token = await AuthService.getToken();
+              print("Token: $token"); // Debugging: Print the token
+
+              try {
+                final response = await http.post(
+                  Uri.parse('https://devjeffrey.dreamhosters.com/api/logout'),
+                  headers: {
+                    'Authorization': 'Bearer $token',
+                  },
+                );
+
+                print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
+                print("Response Body: ${response.body}"); // Debugging: Print response body
+
+                if (response.statusCode == 200) {
+                  // Clear local storage
+                  await AuthService.clearToken();
+
+                  // Navigate to LoginScreen
+                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => LoginScreen()),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Error: $e"),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -268,7 +306,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _saveChanges() {
+    void _saveChanges() async {
     final updatedProfile = {
       'name': _nameController.text,
       'email': _emailController.text,
@@ -276,19 +314,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'phone': _phoneController.text,
     };
 
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Saved Successfully"),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    // Get the authentication token
+    final token = await AuthService.getToken();
 
-    // Delay navigation back to the profile screen
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context, updatedProfile);
-    });
+    try {
+      final response = await http.put(
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/profile/update'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(updatedProfile),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Profile updated successfully!"),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Pass updated data back to the ProfileScreen
+        Navigator.pop(context, updatedProfile);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to update profile. Please try again."),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
