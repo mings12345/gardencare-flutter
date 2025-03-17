@@ -83,69 +83,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // New method to handle logout
   void _logout() async {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
-            },
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              // Get the authentication token
-              final token = await AuthService.getToken();
-              print("Token: $token"); // Debugging: Print the token
+  final token = await AuthService.getToken();
+  print("Retrieved Token: $token"); // Debugging: Print the token
 
-              try {
-                final response = await http.post(
-                  Uri.parse('https://devjeffrey.dreamhosters.com/api/logout'),
-                  headers: {
-                    'Authorization': 'Bearer $token',
-                  },
-                );
+  if (token == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("No token found. Please log in again."),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    return;
+  }
 
-                print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
-                print("Response Body: ${response.body}"); // Debugging: Print response body
+  try {
+    final response = await http.post(
+      Uri.parse('https://devjeffrey.dreamhosters.com/api/logout'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
 
-                if (response.statusCode == 200) {
-                  // Clear local storage
-                  await AuthService.clearToken();
+    print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
+    print("Response Body: ${response.body}"); // Debugging: Print response body
 
-                  // Navigate to LoginScreen
-                  Navigator.of(context).pop(); // Close the dialog
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Failed to logout. Status Code: ${response.statusCode}"),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                }
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("Error: $e"),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-            child: const Text('Logout'),
-          ),
-        ],
+    if (response.statusCode == 200) {
+      await AuthService.clearToken();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
       );
-    },
-  );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error: $e"),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 }
 
   @override
@@ -264,96 +247,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class EditProfileScreen extends StatefulWidget {
-  final String name;
-  final String email;
-  final String address;
-  final String phone;
+    class EditProfileScreen extends StatefulWidget {
+      final String name;
+      final String email;
+      final String address;
+      final String phone;
 
-  const EditProfileScreen({
-    Key? key,
-    required this.name,
-    required this.email,
-    required this.address,
-    required this.phone,
-  }) : super(key: key);
+      const EditProfileScreen({
+        Key? key,
+        required this.name,
+        required this.email,
+        required this.address,
+        required this.phone,
+      }) : super(key: key);
 
-  @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
-}
+      @override
+      State<EditProfileScreen> createState() => _EditProfileScreenState();
+    }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _addressController;
-  late TextEditingController _phoneController;
+    class _EditProfileScreenState extends State<EditProfileScreen> {
+      late TextEditingController _nameController;
+      late TextEditingController _emailController;
+      late TextEditingController _addressController;
+      late TextEditingController _phoneController;
 
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.name);
-    _emailController = TextEditingController(text: widget.email);
-    _addressController = TextEditingController(text: widget.address);
-    _phoneController = TextEditingController(text: widget.phone);
-  }
+      @override
+      void initState() {
+        super.initState();
+        _nameController = TextEditingController(text: widget.name);
+        _emailController = TextEditingController(text: widget.email);
+        _addressController = TextEditingController(text: widget.address);
+        _phoneController = TextEditingController(text: widget.phone);
+      }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _addressController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
+      @override
+      void dispose() {
+        _nameController.dispose();
+        _emailController.dispose();
+        _addressController.dispose();
+        _phoneController.dispose();
+        super.dispose();
+      }
 
-    void _saveChanges() async {
-    final updatedProfile = {
-      'name': _nameController.text,
-      'email': _emailController.text,
-      'address': _addressController.text,
-      'phone': _phoneController.text,
-    };
+        void _saveChanges() async {
+  final updatedProfile = {
+    'name': _nameController.text,
+    'email': _emailController.text,
+    'address': _addressController.text,
+    'phone': _phoneController.text,
+  };
 
-    // Get the authentication token
-    final token = await AuthService.getToken();
+  final token = await AuthService.getToken();
+  print("Retrieved Token: $token"); // Debugging: Print the token
 
-    try {
-      final response = await http.put(
-        Uri.parse('https://devjeffrey.dreamhosters.com/api/profile/update'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(updatedProfile),
+  try {
+    final response = await http.post( // Use POST if the server expects POST
+      Uri.parse('https://devjeffrey.dreamhosters.com/api/profile/update'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(updatedProfile),
+    );
+
+    print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
+    print("Response Body: ${response.body}"); // Debugging: Print response body
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Profile updated successfully!"),
+          duration: Duration(seconds: 2),
+        ),
       );
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Profile updated successfully!"),
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // Pass updated data back to the ProfileScreen
-        Navigator.pop(context, updatedProfile);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Failed to update profile. Please try again."),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
+      Navigator.pop(context, updatedProfile);
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Error: $e"),
+          content: Text("Failed to update profile. Status Code: ${response.statusCode}"),
           duration: const Duration(seconds: 2),
         ),
       );
     }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error: $e"),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
+}
 
 
   @override
