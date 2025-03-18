@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
-import 'package:gardencare_app/screens/login_screen.dart'; 
+import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -29,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late String email;
   late String address;
   late String phone;
+  File? _image; // To store the selected image
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           email: email,
           address: address,
           phone: phone,
+          image: _image, // Pass the current image to the edit screen
         ),
       ),
     );
@@ -58,27 +60,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         email = updatedProfile['email'];
         address = updatedProfile['address'];
         phone = updatedProfile['phone'];
+        _image = updatedProfile['image']; // Update the image
       });
     }
   }
 
-  // New method to navigate to Booking History
   void _viewBookingHistory() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const BookingHistoryScreen(userRole: 'homeowner',)),
+      MaterialPageRoute(
+          builder: (context) => const BookingHistoryScreen(userRole: 'homeowner')),
     );
   }
 
-  // New method to navigate to Calendar
   void _openCalendar() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CalendarScreen(userRole: 'homeowner', loggedInUser: '',)),
+      MaterialPageRoute(
+          builder: (context) => const CalendarScreen(
+              userRole: 'homeowner', loggedInUser: '')),
     );
   }
 
-  // New method to handle logout
   void _logout() {
     showDialog(
       context: context,
@@ -95,12 +98,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             TextButton(
               onPressed: () {
-                // Add your logout logic here
                 Navigator.of(context).pop(); // Close the dialog
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => LoginScreen()),
-                ); // Navigate to the HomeownerScreen
+                ); // Navigate to the LoginScreen
               },
               child: const Text('Logout'),
             ),
@@ -115,7 +117,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Expanded(flex: 2, child: _TopPortion(name: name, email: email, address: address, phone: phone)),
+          Expanded(
+              flex: 2,
+              child: _TopPortion(
+                  name: name,
+                  email: email,
+                  address: address,
+                  phone: phone,
+                  image: _image)), // Pass _image to _TopPortion
           Expanded(
             flex: 5,
             child: SingleChildScrollView(
@@ -137,44 +146,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     phone: phone,
                   ),
                   const SizedBox(height: 20),
-                  // Row for Edit Profile and Logout buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      ElevatedButton(
-                        onPressed: _editProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          "Edit Profile",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                    ElevatedButton(
+                      onPressed: _editProfile,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      ElevatedButton(
-                        onPressed: _logout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          "Logout",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                      child: const Text(
+                        "Edit Profile",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _logout,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
+                      child: const Text(
+                        "Logout",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ),
                     ],
                   ),
                   const SizedBox(height: 30),
-                  // New Cards for Booking History and Calendar
                   _buildActionCard(
                     context,
                     icon: Icons.history,
@@ -197,8 +204,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Helper method to build action cards
-  Widget _buildActionCard(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildActionCard(BuildContext context,
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap}) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -214,7 +223,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ),
               const Icon(Icons.arrow_forward, color: Colors.grey),
@@ -231,6 +241,7 @@ class EditProfileScreen extends StatefulWidget {
   final String email;
   final String address;
   final String phone;
+  final File? image;
 
   const EditProfileScreen({
     Key? key,
@@ -238,6 +249,7 @@ class EditProfileScreen extends StatefulWidget {
     required this.email,
     required this.address,
     required this.phone,
+    this.image,
   }) : super(key: key);
 
   @override
@@ -249,6 +261,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _emailController;
   late TextEditingController _addressController;
   late TextEditingController _phoneController;
+  File? _image; // To store the selected image
 
   @override
   void initState() {
@@ -257,6 +270,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController = TextEditingController(text: widget.email);
     _addressController = TextEditingController(text: widget.address);
     _phoneController = TextEditingController(text: widget.phone);
+    _image = widget.image; // Initialize with the passed image
   }
 
   @override
@@ -268,15 +282,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path); // Update the state with the selected image
+      });
+    }
+  }
+
   void _saveChanges() {
     final updatedProfile = {
       'name': _nameController.text,
       'email': _emailController.text,
       'address': _addressController.text,
       'phone': _phoneController.text,
+      'image': _image, // Include the image in the updated profile
     };
 
-    // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Saved Successfully"),
@@ -284,7 +308,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
 
-    // Delay navigation back to the profile screen
     Future.delayed(const Duration(seconds: 2), () {
       Navigator.pop(context, updatedProfile);
     });
@@ -301,6 +324,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            GestureDetector(
+              onTap: _pickImage, // Trigger image picker on tap
+              child: CircleAvatar(
+                radius: 50,
+                backgroundImage: _image != null
+                    ? FileImage(_image!) // Display the selected image
+                    : const AssetImage('assets/images/violet.jpg')
+                        as ImageProvider, // Default image
+              ),
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: "Name"),
@@ -322,7 +356,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onPressed: _saveChanges,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
               child: const Text(
                 "Save Changes",
@@ -389,11 +424,12 @@ class ProfileInfoCard extends StatelessWidget {
   }
 }
 
-class _TopPortion extends StatefulWidget {
+class _TopPortion extends StatelessWidget {
   final String name;
   final String email;
   final String address;
   final String phone;
+  final File? image;
 
   const _TopPortion({
     Key? key,
@@ -401,25 +437,8 @@ class _TopPortion extends StatefulWidget {
     required this.email,
     required this.address,
     required this.phone,
+    this.image,
   }) : super(key: key);
-
-  @override
-  _TopPortionState createState() => _TopPortionState();
-}
-
-class _TopPortionState extends State<_TopPortion> {
-  File? _image; // To store the selected image
-
-  // Function to pick an image from the gallery
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path); // Update the state with the selected image
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -451,12 +470,13 @@ class _TopPortionState extends State<_TopPortion> {
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => HomeownerScreen(
-                        name: widget.name,
-                        email: widget.email,
-                        address: widget.address,
-                        phone: widget.phone,
-                      )),
+                      MaterialPageRoute(
+                          builder: (context) => HomeownerScreen(
+                                name: name,
+                                email: email,
+                                address: address,
+                                phone: phone,
+                              )),
                     );
                   },
                 ),
@@ -473,43 +493,17 @@ class _TopPortionState extends State<_TopPortion> {
           ),
         ),
         Container(
-          margin: const EdgeInsets.only(top: 50.0), // Adjust the top margin value as needed
+          margin: const EdgeInsets.only(top: 50.0),
           child: Align(
             alignment: Alignment.bottomCenter,
             child: SizedBox(
               width: 135,
               height: 130,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      shape: BoxShape.circle,
-                      image: _image != null
-                          ? DecorationImage(
-                              fit: BoxFit.cover,
-                              image: FileImage(_image!), // Display the selected image
-                            )
-                          : const DecorationImage(
-                              fit: BoxFit.cover,
-                              image: AssetImage('assets/images/violet.jpg'), // Default image
-                            ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: CircleAvatar(
-                      radius: 17,
-                      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                      child: IconButton(
-                        icon: const Icon(Icons.camera_alt, size: 18, color: Colors.green),
-                        onPressed: _pickImage, // Trigger image picker
-                      ),
-                    ),
-                  ),
-                ],
+              child: CircleAvatar(
+                backgroundImage: image != null
+                    ? FileImage(image!) // Display the selected image
+                    : const AssetImage('assets/images/violet.jpg')
+                        as ImageProvider, // Default image
               ),
             ),
           ),

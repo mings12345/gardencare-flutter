@@ -141,7 +141,7 @@ class _BookingFormState extends State<BookingForm> {
       "total_price": totalPrice,
       "special_instructions": specialInstructions ?? "",
     };
-
+ 
     if (selectedType == "Gardening") {
       payload["gardener_id"] = selectedGardenerId;
     } else if (selectedType == "Landscaping") {
