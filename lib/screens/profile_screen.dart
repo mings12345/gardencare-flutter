@@ -3,8 +3,8 @@ import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String name;
@@ -236,140 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class EditProfileScreen extends StatefulWidget {
-  final String name;
-  final String email;
-  final String address;
-  final String phone;
-  final File? image;
 
-  const EditProfileScreen({
-    Key? key,
-    required this.name,
-    required this.email,
-    required this.address,
-    required this.phone,
-    this.image,
-  }) : super(key: key);
-
-  @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
-}
-
-class _EditProfileScreenState extends State<EditProfileScreen> {
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _addressController;
-  late TextEditingController _phoneController;
-  File? _image; // To store the selected image
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.name);
-    _emailController = TextEditingController(text: widget.email);
-    _addressController = TextEditingController(text: widget.address);
-    _phoneController = TextEditingController(text: widget.phone);
-    _image = widget.image; // Initialize with the passed image
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _addressController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path); // Update the state with the selected image
-      });
-    }
-  }
-
-  void _saveChanges() {
-    final updatedProfile = {
-      'name': _nameController.text,
-      'email': _emailController.text,
-      'address': _addressController.text,
-      'phone': _phoneController.text,
-      'image': _image, // Include the image in the updated profile
-    };
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Saved Successfully"),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context, updatedProfile);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Edit Profile"),
-        backgroundColor: Colors.green,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: _pickImage, // Trigger image picker on tap
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _image != null
-                    ? FileImage(_image!) // Display the selected image
-                    : const AssetImage('assets/images/violet.jpg')
-                        as ImageProvider, // Default image
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: "Name"),
-            ),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: "Email"),
-            ),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(labelText: "Address"),
-            ),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: "Phone"),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _saveChanges,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-              child: const Text(
-                "Save Changes",
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class ProfileInfoCard extends StatelessWidget {
   final String name;

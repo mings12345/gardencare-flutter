@@ -7,7 +7,7 @@ class AdminActiveUsers extends StatelessWidget {
   final List<Map<String, dynamic>> activeUsers = const [
     {
       "userId": "001",
-      "userName": "John Doe",
+      "userName": "John Doe", 
       "email": "john.doe@example.com",
       "registrationDate": "2023-09-01",
       "status": "Active",
