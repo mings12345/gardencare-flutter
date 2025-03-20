@@ -16,6 +16,7 @@ import 'screens/homeowner_screen.dart';
 import 'screens/landscaping_screen.dart';
 import 'services/notification_service.dart';
 import 'providers/user_provider.dart';
+import 'providers/seasonal_tips_provider.dart';
 
 void main() async {
   // Ensure Flutter binding is initialized
@@ -35,7 +36,8 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-          ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => SeasonalTipsProvider()),
         ChangeNotifierProvider(create: (context) => BookingProvider()),
         Provider<PusherService>(create: (_) => pusherService), // Provide PusherService
       ],

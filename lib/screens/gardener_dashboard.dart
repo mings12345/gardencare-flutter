@@ -126,15 +126,15 @@ class GardenerDashboard extends StatelessWidget {
               },
             ),
             ListTile(
-            leading: const Icon(Icons.notifications),
-            title: const Text('Notifications'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const NotificationsScreen()),
-              );
-            },
-          ),
+              leading: const Icon(Icons.notifications),
+              title: const Text('Notifications'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.feedback),
               title: const Text('View Feedback'), // New ListTile for Feedback
@@ -192,7 +192,6 @@ class GardenerDashboard extends StatelessWidget {
               'Welcome back!',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            const SizedBox(height: 16),
             const SizedBox(height: 16),
             GridView.count(
               shrinkWrap: true,
@@ -261,9 +260,12 @@ class GardenerDashboard extends StatelessWidget {
             children: [
               Icon(icon, color: Colors.white, size: 20),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 16, color: Colors.white),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                  overflow: TextOverflow.ellipsis, // Prevent overflow
+                ),
               ),
             ],
           ),

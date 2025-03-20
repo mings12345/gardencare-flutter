@@ -8,7 +8,7 @@ class ServiceDetailsScreen extends StatelessWidget {
   final String serviceImage;
   final String price;
   final String serviceType;
-  final List<Map<String, String>> availableGardeners;
+  final List<Map<String, dynamic>> availableGardeners;
 
   const ServiceDetailsScreen({
     Key? key,

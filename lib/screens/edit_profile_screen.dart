@@ -29,9 +29,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _emailController;
   late TextEditingController _addressController;
   late TextEditingController _phoneController;
-  File? _image; 
+  File? _image;
 
-  final String _updateProfileUrl = "http://gardencare.test/api/update-profile"; // Replace with your Laravel API URL
+  // Update this URL based on your environment
+  final String _updateProfileUrl = "http://192.168.2.20:8000/api/update-profile"; // For physical devices on the same network
 
   @override
   void initState() {
@@ -63,21 +64,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _saveChanges() async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse(_updateProfileUrl));
-      
+      var request = http.MultipartRequest('POST', Uri.parse(_updateProfileUrl))
+        ..headers['Accept'] = 'application/json'
+        ..headers['Content-Type'] = 'multipart/form-data';
+
       // Add form fields
       request.fields['name'] = _nameController.text;
       request.fields['email'] = _emailController.text;
       request.fields['address'] = _addressController.text;
       request.fields['phone'] = _phoneController.text;
-      
+
       // Add image if selected
       if (_image != null) {
         request.files.add(await http.MultipartFile.fromPath('image', _image!.path));
       }
 
-      // Send request
-      var response = await request.send();
+      // Send request with a timeout of 30 seconds
+      var response = await request.send().timeout(Duration(seconds: 30));
       var responseBody = await response.stream.bytesToString();
 
       if (response.statusCode == 200) {
@@ -101,6 +104,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
+      print('Error details: $e'); // Print the full error details
     }
   }
 
