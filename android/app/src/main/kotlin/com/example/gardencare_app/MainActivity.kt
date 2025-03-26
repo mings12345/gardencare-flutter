@@ -1,4 +1,4 @@
-package com.gardencare
+package com.example.gardencare
 
 import io.flutter.embedding.android.FlutterActivity
 

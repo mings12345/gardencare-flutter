@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.gardencare"
+    namespace = "com.example.gardencare"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,11 +22,12 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.gardencare"
-        resValue "string", "applicationName", "com.gardencare"
+        applicationId = "com.example.gardencare"
+        multiDexEnabled true
+        resValue "string", "applicationName", "com.example.gardencare"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 31
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -57,6 +58,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-messaging:21.1.0'
     implementation("com.pusher:push-notifications-android:1.9.0")
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2' // Add desugaring dependency
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
 
 apply plugin: 'com.google.gms.google-services' // Keep this line at the bottom

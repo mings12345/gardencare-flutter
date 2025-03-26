@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.gardencare"> <!-- Add this line -->
+    package="com.example.gardencare"> <!-- Add this line -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.CAMERA"/>
@@ -11,6 +11,18 @@
         android:label="gardencare_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
+
+        <channel
+            android:id="high_importance_channel"
+            android:name="High Importance"
+            android:importance="high"
+            android:description="Booking alerts"
+            android:showBadge="true" />
+            
         <activity
             android:name=".MainActivity"
             android:exported="true"

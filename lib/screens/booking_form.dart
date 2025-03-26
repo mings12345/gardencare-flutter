@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/services/pusher_service.dart';
+import 'package:gardencare_app/services/notification_service.dart';
 
 class BookingForm extends StatefulWidget {
   @override
@@ -13,6 +15,7 @@ class BookingForm extends StatefulWidget {
 
 class _BookingFormState extends State<BookingForm> {
   final _formKey = GlobalKey<FormState>();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   String? selectedType;
   int? selectedGardenerId;
@@ -21,6 +24,7 @@ class _BookingFormState extends State<BookingForm> {
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
   String? specialInstructions;
+  bool _isLoading = false;
 
   List<int> selectedServiceIds = [];
   double totalPrice = 0.0;
@@ -32,9 +36,27 @@ class _BookingFormState extends State<BookingForm> {
   @override
   void initState() {
     super.initState();
-    fetchGardeners();
-    fetchServices(); // Fetch services when the form is loaded
-    fetchServiceProviders();
+    _initializeNotifications();
+    _loadData();
+  }
+
+  Future<void> _initializeNotifications() async {
+    // Request permission (iOS)
+    await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    await Future.wait([
+      fetchGardeners(),
+      fetchServices(),
+      fetchServiceProviders(),
+    ]);
+    setState(() => _isLoading = false);
   }
 
   Future<void> fetchGardeners() async {
@@ -49,10 +71,10 @@ class _BookingFormState extends State<BookingForm> {
           gardeners = List<Map<String, dynamic>>.from(jsonDecode(response.body));
         });
       } else {
-        print("Failed to fetch gardeners: ${response.statusCode}");
+        _showError("Failed to load gardeners");
       }
     } catch (e) {
-      print("Error fetching gardeners: $e");
+      _showError("Network error: ${e.toString()}");
     }
   }
 
@@ -64,16 +86,14 @@ class _BookingFormState extends State<BookingForm> {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        print("Fetched Services: $data"); // Debug print
         setState(() {
-          services = List<Map<String, dynamic>>.from(data["services"]);
+          services = List<Map<String, dynamic>>.from(jsonDecode(response.body)["services"]);
         });
       } else {
-        print("Failed to fetch services: ${response.statusCode}");
+        _showError("Failed to load services");
       }
     } catch (e) {
-      print("Error fetching services: $e");
+      _showError("Network error: ${e.toString()}");
     }
   }
 
@@ -89,10 +109,10 @@ class _BookingFormState extends State<BookingForm> {
           serviceProviders = List<Map<String, dynamic>>.from(jsonDecode(response.body));
         });
       } else {
-        print("Failed to fetch service providers: ${response.statusCode}");
+        _showError("Failed to load service providers");
       }
     } catch (e) {
-      print("Error fetching service providers: $e");
+      _showError("Network error: ${e.toString()}");
     }
   }
 
@@ -112,324 +132,405 @@ class _BookingFormState extends State<BookingForm> {
         sum += double.tryParse(service["price"].toString()) ?? 0.0;
       }
     }
-    setState(() {
-      totalPrice = sum;
-    });
+    setState(() => totalPrice = sum);
   }
 
   Future<void> submitBooking() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final int? homeownerId = userProvider.homeownerId;
+    setState(() => _isLoading = true);
 
-    if (homeownerId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("User not logged in. Please log in to book a service.")),
-      );
-      return;
-    }
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final int? homeownerId = userProvider.homeownerId;
 
-    final Map<String, dynamic> payload = {
-      "type": selectedType,
-      "homeowner_id": homeownerId,
-      "service_ids": selectedServiceIds,
-      "address": address,
-      "date": selectedDate!.toIso8601String(),
-      "time": "${selectedTime!.hour}:${selectedTime!.minute}",
-      "total_price": totalPrice,
-      "special_instructions": specialInstructions ?? "",
-    };
- 
-    if (selectedType == "Gardening") {
-      payload["gardener_id"] = selectedGardenerId;
-    } else if (selectedType == "Landscaping") {
-      payload["serviceprovider_id"] = selectedServiceProviderId;
-    }
-
-    final response = await http.post(
-      Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer YOUR_ACCESS_TOKEN",
-      },
-      body: jsonEncode(payload),
-    );
-
-    if (response.statusCode == 201) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking Created Successfully!")),
-      );
-
-      if (selectedType == "Gardening") {
-        _notifyGardener(selectedGardenerId!);
-      } else if (selectedType == "Landscaping") {
-        _notifyServiceProvider(selectedServiceProviderId!);
+      if (homeownerId == null) {
+        _showError("Please login to book services");
+        return;
       }
 
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-      bookingProvider.addBooking(payload);
+      final Map<String, dynamic> payload = {
+        "type": selectedType,
+        "homeowner_id": homeownerId,
+        "service_ids": selectedServiceIds,
+        "address": address,
+        "date": selectedDate!.toIso8601String(),
+        "time": "${selectedTime!.hour}:${selectedTime!.minute}",
+        "total_price": totalPrice,
+        "special_instructions": specialInstructions ?? "",
+      };
 
-      Navigator.pushNamed(
-        context,
-        '/bookings',
-        arguments: payload,
+      if (selectedType == "Gardening") {
+        payload["gardener_id"] = selectedGardenerId;
+      } else if (selectedType == "Landscaping") {
+        payload["serviceprovider_id"] = selectedServiceProviderId;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer YOUR_ACCESS_TOKEN",
+        },
+        body: jsonEncode(payload),
       );
-    } else {
-      print("Booking Failed: ${response.body}");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking Failed: ${response.body}")),
-      );
+
+      if (response.statusCode == 201) {
+        _handleSuccessfulBooking(payload);
+      } else {
+        _showError("Booking failed: ${response.body}");
+      }
+    } catch (e) {
+      _showError("Error: ${e.toString()}");
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  void _notifyGardener(int gardenerId) async {
-    final pusherService = Provider.of<PusherService>(context, listen: false);
-    await pusherService.subscribeToChannel('private-gardener.$gardenerId');
+  void _handleSuccessfulBooking(Map<String, dynamic> bookingData) {
+  // Update local state
+  Provider.of<BookingProvider>(context, listen: false).addBooking(bookingData);
+  
+  // Show success message
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text("Booking Created Successfully!"),
+      backgroundColor: Colors.green,
+    ),
+  );
 
-    final channel = pusherService.pusher.getChannel('private-gardener.$gardenerId');
-    if (channel != null) {
-      channel.onEvent = (event) {
-        if (event != null && event.eventName == 'pusher:subscription_succeeded') {
-          print("🎉 Subscription succeeded for gardener channel: private-gardener.$gardenerId");
-          pusherService.triggerEvent(
-            channelName: 'private-gardener.$gardenerId',
-            eventName: 'booking-created',
-            data: {"message": "New booking created!"},
-          );
-        }
-      };
-    } else {
-      print("❌ Failed to subscribe to gardener channel: private-gardener.$gardenerId");
-    }
+  // Get homeownerId from booking data
+  final int homeownerId = bookingData['homeowner_id'];
+
+  // Send real-time notifications
+  if (selectedType == "Gardening") {
+    _notifyGardener(selectedGardenerId!, homeownerId);
+  } else if (selectedType == "Landscaping") {
+    _notifyServiceProvider(selectedServiceProviderId!, homeownerId);
   }
 
-  void _notifyServiceProvider(int serviceProviderId) async {
-    final pusherService = Provider.of<PusherService>(context, listen: false);
-    await pusherService.subscribeToChannel('private-serviceprovider.$serviceProviderId');
+  // Navigate to bookings screen
+  Navigator.pushNamed(context, '/bookings');
+}
 
-    final channel = pusherService.pusher.getChannel('private-serviceprovider.$serviceProviderId');
-    if (channel != null) {
-      channel.onEvent = (event) {
-        if (event != null && event.eventName == 'pusher:subscription_succeeded') {
-          print("🎉 Subscription succeeded for service provider channel: private-serviceprovider.$serviceProviderId");
-          pusherService.triggerEvent(
-            channelName: 'private-serviceprovider.$serviceProviderId',
-            eventName: 'booking-created',
-            data: {"message": "New booking created!"},
-          );
-        }
-      };
-    } else {
-      print("❌ Failed to subscribe to service provider channel: private-serviceprovider.$serviceProviderId");
-    }
+void _notifyGardener(int gardenerId, int homeownerId) async {
+  try {
+    final pusherService = Provider.of<PusherService>(context, listen: false);
+    final notificationService = Provider.of<NotificationService>(context, listen: false);
+
+    // Trigger Pusher event
+    await pusherService.triggerEvent(
+      channelName: 'private-gardener.$gardenerId',
+      eventName: 'new-booking',
+      data: {
+        "message": "New booking created!",
+        "booking_id": DateTime.now().millisecondsSinceEpoch,
+        "homeowner_id": homeownerId,
+      },
+    );
+
+    // Send FCM push notification
+    await notificationService.showNotification(
+      title: "New Booking!",
+      body: "You have a new gardening booking request",
+    );
+  } catch (e) {
+    print("Error notifying gardener: $e");
+  }
+}
+
+void _notifyServiceProvider(int serviceProviderId, int homeownerId) async {
+  try {
+    final pusherService = Provider.of<PusherService>(context, listen: false);
+    final notificationService = Provider.of<NotificationService>(context, listen: false);
+
+    // Trigger Pusher event
+    await pusherService.triggerEvent(
+      channelName: 'private-serviceprovider.$serviceProviderId',
+      eventName: 'new-booking',
+      data: {
+        "message": "New landscaping booking!",
+        "booking_id": DateTime.now().millisecondsSinceEpoch,
+        "homeowner_id": homeownerId,
+      },
+    );
+
+    // Send FCM push notification
+    await notificationService.showNotification(
+      title: "New Booking!",
+      body: "You have a new landscaping booking request",
+    );
+  } catch (e) {
+    print("Error notifying service provider: $e");
+  }
+}
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Booking Form")),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Reservation Service"),
+        title: Text("Book Service"),
         backgroundColor: Colors.green,
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DropdownButtonFormField<String>(
-                  value: selectedType,
-                  onChanged: (value) {
-                    print("Selected Type: $value"); // Debug print
-                    setState(() {
-                      selectedType = value;
-                      selectedServiceIds = []; // Reset selected services when type changes
-                      totalPrice = 0.0; // Reset total price
-                    });
-                  },
-                  items: ["Gardening", "Landscaping"]
-                      .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-                      .toList(),
-                  decoration: InputDecoration(
-                    labelText: "Service Type",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                  validator: (value) => value == null ? "Select service type" : null,
-                ),
-
-                if (selectedType == "Gardening") ...[
-                  SizedBox(height: 20),
-                  DropdownButtonFormField<int>(
-                    value: selectedGardenerId,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedGardenerId = value;
-                      });
-                    },
-                    items: gardeners.map<DropdownMenuItem<int>>((gardener) {
-                      return DropdownMenuItem<int>(
-                        value: gardener["id"],
-                        child: Text(gardener["name"]),
-                      );
-                    }).toList(),
-                    decoration: InputDecoration(
-                      labelText: "Select Gardener",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                    validator: (value) => value == null ? "Select a gardener" : null,
-                  ),
-                ],
-
-                if (selectedType == "Landscaping") ...[
-                  SizedBox(height: 20),
-                  DropdownButtonFormField<int>(
-                    value: selectedServiceProviderId,
-                    onChanged: (value) => setState(() => selectedServiceProviderId = value),
-                    items: serviceProviders.map<DropdownMenuItem<int>>((provider) {
-                      return DropdownMenuItem<int>(
-                        value: provider["id"],
-                        child: Text(provider["name"]),
-                      );
-                    }).toList(),
-                    decoration: InputDecoration(
-                      labelText: "Select Service Provider",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                    validator: (value) => value == null ? "Select a service provider" : null,
-                  ),
-                ],
-
-                if (selectedType != null) ...[
-                  SizedBox(height: 20),
-                  Text("Select Services:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Wrap(
-                    children: getFilteredServices().map((service) {
-                      return Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                        child: CheckboxListTile(
-                          title: Text("${service['name']} (₱${service['price']})"),
-                          value: selectedServiceIds.contains(service['id']),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value == true) {
-                                selectedServiceIds.add(service['id']);
-                              } else {
-                                selectedServiceIds.remove(service['id']);
-                              }
-                              updateTotalPrice();
-                            });
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-
-                if (selectedType != null) ...[
-                  SizedBox(height: 20),
-                  Text("Total Price: ₱${totalPrice.toStringAsFixed(2)}",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ],
-
-                SizedBox(height: 20),
-                TextFormField(
-                  decoration: InputDecoration(
-                    labelText: "Address",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                  onSaved: (value) => address = value!,
-                  validator: (value) => value!.isEmpty ? "Enter address" : null,
-                ),
-
-                SizedBox(height: 20),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  child: ListTile(
-                    title: Text(selectedDate == null
-                        ? "Select Date"
-                        : "${selectedDate!.toLocal()}".split(' ')[0]),
-                    trailing: Icon(Icons.calendar_today, color: Colors.green),
-                    onTap: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime(2030),
-                      );
-                      if (pickedDate != null) setState(() => selectedDate = pickedDate);
-                    },
-                  ),
-                ),
-
-                SizedBox(height: 20),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  child: ListTile(
-                    title: Text(selectedTime == null
-                        ? "Select Time"
-                        : "${selectedTime!.format(context)}"),
-                    trailing: Icon(Icons.access_time, color: Colors.green),
-                    onTap: () async {
-                      TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-                      if (pickedTime != null) {
-                        setState(() => selectedTime = pickedTime);
-                      }
-                    },
-                  ),
-                ),
-
-                SizedBox(height: 20),
-                TextFormField(
-                  decoration: InputDecoration(
-                    labelText: "Special Instructions (Optional)",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                  onSaved: (value) => specialInstructions = value,
-                ),
-
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: submitBooking,
-                  child: Text("Submit Booking"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                ),
+                _buildServiceTypeDropdown(),
+                if (selectedType == "Gardening") _buildGardenerDropdown(),
+                if (selectedType == "Landscaping") _buildServiceProviderDropdown(),
+                if (selectedType != null) _buildServiceSelection(),
+                if (selectedType != null) _buildTotalPrice(),
+                _buildAddressField(),
+                _buildDatePicker(),
+                _buildTimePicker(),
+                _buildSpecialInstructions(),
+                SizedBox(height: 24),
+                _buildSubmitButton(),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildServiceTypeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: selectedType,
+      onChanged: (value) {
+        setState(() {
+          selectedType = value;
+          selectedServiceIds = [];
+          totalPrice = 0.0;
+        });
+      },
+      items: ["Gardening", "Landscaping"]
+          .map((type) => DropdownMenuItem(
+                value: type,
+                child: Text(type),
+              ))
+          .toList(),
+      decoration: InputDecoration(
+        labelText: "Service Type",
+        border: OutlineInputBorder(),
+      ),
+      validator: (value) => value == null ? "Please select service type" : null,
+    );
+  }
+
+  Widget _buildGardenerDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: DropdownButtonFormField<int>(
+        value: selectedGardenerId,
+        onChanged: (value) => setState(() => selectedGardenerId = value),
+        items: gardeners.map((gardener) {
+          return DropdownMenuItem<int>(
+            value: gardener["id"],
+            child: Text(gardener["name"]),
+          );
+        }).toList(),
+        decoration: InputDecoration(
+          labelText: "Select Gardener",
+          border: OutlineInputBorder(),
+        ),
+        validator: (value) => value == null ? "Please select a gardener" : null,
+      ),
+    );
+  }
+
+  Widget _buildServiceProviderDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: DropdownButtonFormField<int>(
+        value: selectedServiceProviderId,
+        onChanged: (value) => setState(() => selectedServiceProviderId = value),
+        items: serviceProviders.map((provider) {
+          return DropdownMenuItem<int>(
+            value: provider["id"],
+            child: Text(provider["name"]),
+          );
+        }).toList(),
+        decoration: InputDecoration(
+          labelText: "Select Service Provider",
+          border: OutlineInputBorder(),
+        ),
+        validator: (value) => value == null ? "Please select a provider" : null,
+      ),
+    );
+  }
+
+  Widget _buildServiceSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 16, bottom: 8),
+          child: Text(
+            "Select Services:",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ...getFilteredServices().map((service) {
+          return CheckboxListTile(
+            title: Text("${service['name']} (₱${service['price']})"),
+            value: selectedServiceIds.contains(service['id']),
+            onChanged: (bool? value) {
+              setState(() {
+                if (value == true) {
+                  selectedServiceIds.add(service['id']);
+                } else {
+                  selectedServiceIds.remove(service['id']);
+                }
+                updateTotalPrice();
+              });
+            },
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildTotalPrice() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Text(
+        "Total Price: ₱${totalPrice.toStringAsFixed(2)}",
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildAddressField() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: TextFormField(
+        decoration: InputDecoration(
+          labelText: "Address",
+          border: OutlineInputBorder(),
+        ),
+        validator: (value) => value!.isEmpty ? "Please enter address" : null,
+        onSaved: (value) => address = value!,
+      ),
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: InkWell(
+        onTap: () async {
+          final DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: DateTime.now(),
+            firstDate: DateTime.now(),
+            lastDate: DateTime.now().add(Duration(days: 365)),
+          );
+          if (picked != null) setState(() => selectedDate = picked);
+        },
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: "Date",
+            border: OutlineInputBorder(),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                selectedDate == null
+                    ? "Select date"
+                    : "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}",
+              ),
+              Icon(Icons.calendar_today),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimePicker() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: InkWell(
+        onTap: () async {
+          final TimeOfDay? picked = await showTimePicker(
+            context: context,
+            initialTime: TimeOfDay.now(),
+          );
+          if (picked != null) setState(() => selectedTime = picked);
+        },
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: "Time",
+            border: OutlineInputBorder(),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                selectedTime == null
+                    ? "Select time"
+                    : selectedTime!.format(context),
+              ),
+              Icon(Icons.access_time),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpecialInstructions() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: TextFormField(
+        decoration: InputDecoration(
+          labelText: "Special Instructions (Optional)",
+          border: OutlineInputBorder(),
+        ),
+        maxLines: 3,
+        onSaved: (value) => specialInstructions = value,
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return ElevatedButton(
+      onPressed: _isLoading ? null : submitBooking,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        padding: EdgeInsets.symmetric(vertical: 16),
+      ),
+      child: _isLoading
+          ? CircularProgressIndicator(color: Colors.white)
+          : Text(
+              "CONFIRM BOOKING",
+              style: TextStyle(fontSize: 16),
+            ),
     );
   }
 }

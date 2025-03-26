@@ -15,11 +15,11 @@ class SeasonalTip {
 
   factory SeasonalTip.fromJson(Map<String, dynamic> json) {
     return SeasonalTip(
-      id: json['id'],
-      season: json['season'],
-      region: json['region'],
-      tip: json['tip'],
-      plantName: json['plant']['name'],
+      id: json['id'] ?? 0,
+      season: json['season'] ?? 'Unknown Season',
+      region: json['region'] ?? 'Unknown Region',
+      tip: json['tip'] ?? 'No tip available',
+      plantName: json['plant']?['name'] ?? 'Unknown Plant', // ✅ Fix: Prevents null error
     );
   }
 }
