@@ -2,11 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
-import 'package:gardencare_app/services/pusher_service.dart';
-import 'package:gardencare_app/services/notification_service.dart';
 
 class BookingForm extends StatefulWidget {
   @override
@@ -15,7 +12,6 @@ class BookingForm extends StatefulWidget {
 
 class _BookingFormState extends State<BookingForm> {
   final _formKey = GlobalKey<FormState>();
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   String? selectedType;
   int? selectedGardenerId;
@@ -36,17 +32,7 @@ class _BookingFormState extends State<BookingForm> {
   @override
   void initState() {
     super.initState();
-    _initializeNotifications();
     _loadData();
-  }
-
-  Future<void> _initializeNotifications() async {
-    // Request permission (iOS)
-    await _firebaseMessaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
   }
 
   Future<void> _loadData() async {
@@ -136,136 +122,105 @@ class _BookingFormState extends State<BookingForm> {
   }
 
   Future<void> submitBooking() async {
-    if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
+  if (!_formKey.currentState!.validate()) return;
+  _formKey.currentState!.save();
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final int? homeownerId = userProvider.homeownerId;
+  try {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final int? homeownerId = userProvider.homeownerId;
 
-      if (homeownerId == null) {
-        _showError("Please login to book services");
-        return;
-      }
+    if (homeownerId == null) {
+      _showError("Please login to book services");
+      return;
+    }
 
-      final Map<String, dynamic> payload = {
-        "type": selectedType,
+    final Map<String, dynamic> payload = {
+      "type": selectedType,
+      "homeowner_id": homeownerId,
+      "service_ids": selectedServiceIds,
+      "address": address,
+      "date": selectedDate!.toIso8601String(),
+      "time": "${selectedTime!.hour}:${selectedTime!.minute}",
+      "total_price": totalPrice,
+      "special_instructions": specialInstructions ?? "",
+    };
+
+    if (selectedType == "Gardening") {
+      payload["gardener_id"] = selectedGardenerId;
+    } else if (selectedType == "Landscaping") {
+      payload["serviceprovider_id"] = selectedServiceProviderId;
+    }
+
+    final response = await http.post(
+      Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer ${userProvider.token}",
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 201) {
+      _handleSuccessfulBooking(payload);
+      
+      // Get the homeowner name for the notification
+      final homeownerName = userProvider.user?['name'] ?? "A homeowner";
+      
+      // Prepare notification details
+      final notificationData = {
+        "title": "New Booking Received!",
+        "body": "$homeownerName has booked your services",
+        "type": "new_booking",
+        "booking_id": jsonDecode(response.body)['id'],
         "homeowner_id": homeownerId,
-        "service_ids": selectedServiceIds,
-        "address": address,
-        "date": selectedDate!.toIso8601String(),
-        "time": "${selectedTime!.hour}:${selectedTime!.minute}",
-        "total_price": totalPrice,
-        "special_instructions": specialInstructions ?? "",
       };
-
-      if (selectedType == "Gardening") {
-        payload["gardener_id"] = selectedGardenerId;
-      } else if (selectedType == "Landscaping") {
-        payload["serviceprovider_id"] = selectedServiceProviderId;
-      }
-
-      final response = await http.post(
-        Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
+      
+      // Send notification to the selected provider
+      final providerId = selectedType == "Gardening" 
+          ? selectedGardenerId 
+          : selectedServiceProviderId;
+          
+      await http.post(
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/send_notification'),
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "Authorization": "Bearer YOUR_ACCESS_TOKEN",
+          "Authorization": "Bearer ${userProvider.token}",
         },
-        body: jsonEncode(payload),
+        body: jsonEncode({
+          "user_id": providerId,
+          "user_type": selectedType == "Gardening" ? "gardener" : "service_provider",
+          "notification": notificationData,
+        }),
       );
-
-      if (response.statusCode == 201) {
-        _handleSuccessfulBooking(payload);
-      } else {
-        _showError("Booking failed: ${response.body}");
-      }
-    } catch (e) {
-      _showError("Error: ${e.toString()}");
-    } finally {
-      setState(() => _isLoading = false);
+    } else {
+      _showError("Booking failed: ${response.body}");
     }
+  } catch (e) {
+    _showError("Error: ${e.toString()}");
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
   void _handleSuccessfulBooking(Map<String, dynamic> bookingData) {
-  // Update local state
-  Provider.of<BookingProvider>(context, listen: false).addBooking(bookingData);
-  
-  // Show success message
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text("Booking Created Successfully!"),
-      backgroundColor: Colors.green,
-    ),
-  );
+    // Update local state
+    Provider.of<BookingProvider>(context, listen: false).addBooking(bookingData);
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Booking Created Successfully!"),
+        backgroundColor: Colors.green,
+      ),
+    );
 
-  // Get homeownerId from booking data
-  final int homeownerId = bookingData['homeowner_id'];
-
-  // Send real-time notifications
-  if (selectedType == "Gardening") {
-    _notifyGardener(selectedGardenerId!, homeownerId);
-  } else if (selectedType == "Landscaping") {
-    _notifyServiceProvider(selectedServiceProviderId!, homeownerId);
+    // Navigate to bookings screen
+    Navigator.pushNamed(context, '/bookings');
   }
-
-  // Navigate to bookings screen
-  Navigator.pushNamed(context, '/bookings');
-}
-
-void _notifyGardener(int gardenerId, int homeownerId) async {
-  try {
-    final pusherService = Provider.of<PusherService>(context, listen: false);
-    final notificationService = Provider.of<NotificationService>(context, listen: false);
-
-    // Trigger Pusher event
-    await pusherService.triggerEvent(
-      channelName: 'private-gardener.$gardenerId',
-      eventName: 'new-booking',
-      data: {
-        "message": "New booking created!",
-        "booking_id": DateTime.now().millisecondsSinceEpoch,
-        "homeowner_id": homeownerId,
-      },
-    );
-
-    // Send FCM push notification
-    await notificationService.showNotification(
-      title: "New Booking!",
-      body: "You have a new gardening booking request",
-    );
-  } catch (e) {
-    print("Error notifying gardener: $e");
-  }
-}
-
-void _notifyServiceProvider(int serviceProviderId, int homeownerId) async {
-  try {
-    final pusherService = Provider.of<PusherService>(context, listen: false);
-    final notificationService = Provider.of<NotificationService>(context, listen: false);
-
-    // Trigger Pusher event
-    await pusherService.triggerEvent(
-      channelName: 'private-serviceprovider.$serviceProviderId',
-      eventName: 'new-booking',
-      data: {
-        "message": "New landscaping booking!",
-        "booking_id": DateTime.now().millisecondsSinceEpoch,
-        "homeowner_id": homeownerId,
-      },
-    );
-
-    // Send FCM push notification
-    await notificationService.showNotification(
-      title: "New Booking!",
-      body: "You have a new landscaping booking request",
-    );
-  } catch (e) {
-    print("Error notifying service provider: $e");
-  }
-}
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "423563462821",
-    "project_id": "gardencare-659cd",
-    "storage_bucket": "gardencare-659cd.firebasestorage.app"
+    "project_number": "686181711120",
+    "project_id": "gardencare-2c63e",
+    "storage_bucket": "gardencare-2c63e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:423563462821:android:3c029a5823a1a0ae84654c",
+        "mobilesdk_app_id": "1:686181711120:android:5870181196bb9606a27995",
         "android_client_info": {
           "package_name": "com.example.gardencare"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDwM36ybLW0KHFh2JasxB1RNAlJ-cpChf0"
+          "current_key": "AIzaSyDXAZdYVN06aT3hy6SZl-D299pB2KFwt8M"
         }
       ],
       "services": {

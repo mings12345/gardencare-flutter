@@ -1,12 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.gardencare"> <!-- Add this line -->
+    package="com.example.gardencare">
+
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    
+
     <application
         android:label="gardencare_app"
         android:name="${applicationName}"
@@ -16,13 +17,6 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="high_importance_channel" />
 
-        <channel
-            android:id="high_importance_channel"
-            android:name="High Importance"
-            android:importance="high"
-            android:description="Booking alerts"
-            android:showBadge="true" />
-            
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -34,21 +28,18 @@
             android:windowSoftInputMode="adjustResize">
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+              android:resource="@style/NormalTheme"/>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <meta-data
-            android:name="io.flutter.embedding.android.OldRenderingBackend"
-            android:value="true" />
-        <meta-data android:name="flutter.vulkan" android:value="false" />
-        <meta-data
-            android:name="flutterEmbedding"
-            android:value="2" />
+
+        <meta-data android:name="io.flutter.embedding.android.OldRenderingBackend" android:value="true"/>
+        <meta-data android:name="flutter.vulkan" android:value="false"/>
+        <meta-data android:name="flutterEmbedding" android:value="2"/>
     </application>
+
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
