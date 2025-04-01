@@ -1,0 +1,2 @@
+D:/flutter app 2/gardencare_app/android/app/.cxx/RelWithDebInfo/5t3c4372/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/flutter app 2/gardencare_app/android/app/.cxx/RelWithDebInfo/5t3c4372/armeabi-v7a/CMakeFiles/rebuild_cache.dir

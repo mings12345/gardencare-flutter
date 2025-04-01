@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
 import 'package:gardencare_app/screens/admin_dashboard_screen.dart';
 import 'package:gardencare_app/screens/gardener_dashboard.dart';
-import 'package:gardencare_app/screens/messaging_screen.dart';
+import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:gardencare_app/screens/onboarding_screen.dart';
 import 'package:gardencare_app/screens/profile_screen.dart';
@@ -75,8 +75,8 @@ class MyApp extends StatelessWidget {
               address: '123 Garden St, Green City',
               phone: '123-456-7890',
             ),
-        '/message': (context) => const MessagingScreen(gardenerName: 'John Doe'),
-      },
+        '/message': (context) => ChatListScreen()
+      }
     );
   }
 }

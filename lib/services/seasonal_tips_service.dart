@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/seasonal_tip.dart';
 
 class SeasonalTipsService {
-  final String baseUrl = 'http://192.168.1.120/api';
+  final String baseUrl = 'http://192.168.2.34/api';
 
   Future<List<SeasonalTip>> getSeasonalTips(int plantId, String region, String season) async {
     try {

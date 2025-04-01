@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/screens/bookings_screen.dart';
-import 'package:gardencare_app/screens/messaging_screen.dart';
+import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/seasonal_tips_screen.dart';
 import 'package:gardencare_app/screens/service_details_screen.dart';
 import 'package:gardencare_app/screens/landscaping_service_details.dart';
@@ -67,16 +67,16 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           });
         },
         children: [
-          _buildHomePage(),
-          BookingsScreen(), // Replace with your actual BookingsScreen
-          MessagingScreen(gardenerName: widget.name), // Provide the gardenerName parameter
-          ProfileScreen(
-            name: widget.name,
-            email: widget.email,
-            address: widget.address,
-            phone: widget.phone,
-          ),
-        ],
+  _buildHomePage(),
+  BookingsScreen(),
+  ChatListScreen(),
+  ProfileScreen(
+    name: widget.name,
+    email: widget.email,
+    address: widget.address,
+    phone: widget.phone,
+  ),
+],
       ),
       bottomNavigationBar: SalomonBottomBar(
         currentIndex: _selectedIndex,

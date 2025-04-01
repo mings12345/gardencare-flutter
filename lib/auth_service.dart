@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'user.dart';
+import 'models/user.dart';
 
 class AuthService {
   final String baseUrl = 'https://devjeffrey.dreamhosters.com/api'; // Update based on your setup
@@ -44,7 +44,48 @@ class AuthService {
     print('Login Exception: $e');  // Debugging line
     rethrow;
   }
-}
+} 
+Future<List<User>> fetchGardeners() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      throw Exception('No token found. Please log in again.');
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/gardeners'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> jsonResponse = jsonDecode(response.body);
+      return jsonResponse.map((json) => User.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load gardeners: ${response.body}');
+    }
+  }
+
+  Future<List<User>> fetchServiceProviders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      throw Exception('No token found. Please log in again.');
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/service_providers'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> jsonResponse = jsonDecode(response.body);
+      return jsonResponse.map((json) => User.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load service providers: ${response.body}');
+    }
+  }
 
  Future<Map<String, String>> fetchProfileData(String userId) async {
   final prefs = await SharedPreferences.getInstance();

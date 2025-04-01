@@ -5,7 +5,7 @@ import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/gardener_profile.dart';
 import 'calendar_screen.dart';
-import 'messaging_screen.dart';
+import 'chat_list_screen.dart';
 import 'total_booking.dart';
 import 'total_service_screen.dart';
 import 'total_earnings.dart'; // Import the new screen
@@ -103,13 +103,11 @@ class GardenerDashboard extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context); // Close the drawer
                 Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MessagingScreen(
-                      gardenerName: 'Homeowner Name', // Replace dynamically
-                    ),
-                  ),
-                );
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatListScreen(),
+              ),
+            );
               },
             ),
             ListTile(

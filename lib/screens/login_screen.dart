@@ -6,7 +6,7 @@ import '../auth_service.dart';
 import 'gardener_dashboard.dart';
 import 'homeowner_screen.dart';
 import 'service_provider_screen.dart';
-import '../user.dart';
+import '../models/user.dart';
 import '../user_type.dart';
 
 

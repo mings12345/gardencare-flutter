@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import '../auth_service.dart';
-import '../user.dart';
+import '../models/user.dart';
 import 'login_screen.dart'; // Import your login screen
 
 class RegistrationScreen extends StatefulWidget {
