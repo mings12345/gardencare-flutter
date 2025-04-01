@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/user.dart';
 
 class AuthService {
-  final String baseUrl = 'https://devjeffrey.dreamhosters.com/api'; // Update based on your setup
+    final String baseUrl = dotenv.get('BASE_URL'); 
 
  Future<User?> login(
   String email,
@@ -14,7 +15,7 @@ class AuthService {
 ) async {
   try {
     final response = await http.post(
-      Uri.parse('$baseUrl/login'),
+      Uri.parse('$baseUrl/api/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -29,6 +30,7 @@ class AuthService {
       // Save token to local storage
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', token);
+      await prefs.setInt('userId', user.id);
       print('Token saved: $token'); // Debugging line
 
       return user;
@@ -54,7 +56,7 @@ Future<List<User>> fetchGardeners() async {
     }
 
     final response = await http.get(
-      Uri.parse('$baseUrl/gardeners'),
+      Uri.parse('$baseUrl/api/gardeners'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -75,7 +77,7 @@ Future<List<User>> fetchGardeners() async {
     }
 
     final response = await http.get(
-      Uri.parse('$baseUrl/service_providers'),
+      Uri.parse('$baseUrl/api/service_providers'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -95,7 +97,7 @@ Future<List<User>> fetchGardeners() async {
     throw Exception('No token found. Please log in again.');
   }
 
-  final url = '$baseUrl/profile/$userId';
+  final url = '$baseUrl/api/profile/$userId';
   print('Request URL: $url'); // Debugging line
   print('Authorization Token: $token'); // Debugging line
   print('User ID: $userId'); // Debugging line
@@ -135,7 +137,7 @@ Future<List<User>> fetchGardeners() async {
 ) async {
   try {
     final response = await http.post(
-      Uri.parse('$baseUrl/register'),
+      Uri.parse('$baseUrl/api/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': name,

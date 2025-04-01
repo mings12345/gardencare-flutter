@@ -16,11 +16,12 @@ import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/landscaping_screen.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/providers/seasonal_tips_provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
+      await dotenv.load(fileName: ".env");
   runApp(
     MultiProvider(
       providers: [

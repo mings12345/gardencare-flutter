@@ -12,21 +12,27 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   List<User> users = [];
   bool isLoading = true;
-  String? infoMessage; // Changed from errorMessage to infoMessage
+  String? infoMessage;
   int? currentUserId;
+  String? authToken; // Added to store the auth token
   final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentUserId();
-    _fetchChatUsers();
+    _initializeData();
   }
 
-  Future<void> _loadCurrentUserId() async {
+  Future<void> _initializeData() async {
+    await _loadCurrentUserData(); // Combined user ID and token loading
+    await _fetchChatUsers();
+  }
+
+  Future<void> _loadCurrentUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       currentUserId = prefs.getInt('userId');
+      authToken = prefs.getString('token');
     });
   }
 
@@ -63,6 +69,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       // Filter current user and duplicates
       final filteredUsers = allUsers
           .where((user) => user.id != currentUserId)
+          .toSet()
           .toList();
 
       setState(() {
@@ -162,11 +169,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               : 'Service Provider',
                         ),
                         trailing: Icon(Icons.chat_bubble_outline),
-                        onTap: () {
+                        onTap: () async {
+                          // Get the latest token when navigating
+                          final prefs = await SharedPreferences.getInstance();
+                          final currentToken = prefs.getString('token') ?? '';
+                          
+                          if (currentToken.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Authentication required'))
+                            );
+                            return;
+                          }
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ChatScreen(user: user),
+                              builder: (context) => ChatScreen(
+                                userId: user.id,
+                                authToken: currentToken,
+                              ),
                             ),
                           );
                         },

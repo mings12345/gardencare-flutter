@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
@@ -47,8 +48,9 @@ class _BookingFormState extends State<BookingForm> {
 
   Future<void> fetchGardeners() async {
     try {
+    final baseUrl = dotenv.get('BASE_URL'); 
       final response = await http.get(
-        Uri.parse('https://devjeffrey.dreamhosters.com/api/gardeners'),
+        Uri.parse('$baseUrl/api/gardeners'),
         headers: {"Accept": "application/json"},
       );
 
@@ -63,11 +65,12 @@ class _BookingFormState extends State<BookingForm> {
       _showError("Network error: ${e.toString()}");
     }
   }
-
+  
   Future<void> fetchServices() async {
     try {
+    final baseUrl = dotenv.get('BASE_URL'); 
       final response = await http.get(
-        Uri.parse('https://devjeffrey.dreamhosters.com/api/services'),
+        Uri.parse('$baseUrl/api/services'),
         headers: {"Accept": "application/json"},
       );
 
@@ -85,8 +88,9 @@ class _BookingFormState extends State<BookingForm> {
 
   Future<void> fetchServiceProviders() async {
     try {
+    final baseUrl = dotenv.get('BASE_URL'); 
       final response = await http.get(
-        Uri.parse('https://devjeffrey.dreamhosters.com/api/service_providers'),
+        Uri.parse('$baseUrl/api/service_providers'),
         headers: {"Accept": "application/json"},
       );
 
@@ -152,9 +156,9 @@ class _BookingFormState extends State<BookingForm> {
     } else if (selectedType == "Landscaping") {
       payload["serviceprovider_id"] = selectedServiceProviderId;
     }
-
+    final baseUrl = dotenv.get('BASE_URL');
     final response = await http.post(
-      Uri.parse('https://devjeffrey.dreamhosters.com/api/create_booking'),
+      Uri.parse('$baseUrl/api/create_booking'),
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",

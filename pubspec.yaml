@@ -46,10 +46,12 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   pusher_channels_flutter: ^2.5.0
   http_parser: ^4.0.0
+  logger: ^1.1.0  # For better logging
   firebase_core: ^3.12.1
   firebase_messaging: ^15.2.4
   infinite_scroll_pagination: ^3.2.0
   flutter_stripe: ^11.4.0
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +77,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - .env  # Add this under flutter: assets:
     - assets/images/
   #   - images/a_dot_ham.jpeg
 

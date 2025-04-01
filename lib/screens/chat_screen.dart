@@ -1,200 +1,168 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:gardencare_app/models/user.dart';
-import 'package:gardencare_app/models/message.dart';
-import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
+import '../services/pusher_service.dart';
 
 class ChatScreen extends StatefulWidget {
-  final User user;
+  final int userId;
+  final String authToken;
 
-  const ChatScreen({required this.user, Key? key}) : super(key: key);
+  const ChatScreen({
+    required this.userId,
+    required this.authToken,
+    Key? key,
+  }) : super(key: key);
 
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  ChatScreenState createState() => ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  List<Message> messages = [];
-  final TextEditingController _controller = TextEditingController();
-  final int currentUserId = 1;
-  late PusherChannelsFlutter _pusher;
+class ChatScreenState extends State<ChatScreen> {
+  late PusherService _pusherService;
+  List<dynamic> _messages = [];
+  bool _isLoading = true;
+  bool _hasError = false;
+  late ScrollController _scrollController;
+  final TextEditingController _messageController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _initPusher();
-    fetchMessages();
+    _scrollController = ScrollController();
+    _initializeChat();
   }
 
-  Future<void> _initPusher() async {
-    try {
-      _pusher = PusherChannelsFlutter.getInstance();
-      
-      await _pusher.init(
-        apiKey: '9b6cf6a0eecc032de3a0',
-        cluster: 'ap1',
-        onConnectionStateChange: _onConnectionStateChange,
-        onError: _onError,
-        onEvent: _onEvent,
-        onSubscriptionSucceeded: _onSubscriptionSucceeded,
-        onMemberAdded: _onMemberAdded,
-        onMemberRemoved: _onMemberRemoved,
-      );
-
-      await _pusher.connect();
-      await _pusher.subscribe(channelName: 'private-user.$currentUserId');
-    } catch (e) {
-      debugPrint('Pusher init error: $e');
-    }
-  }
-
-  void _onConnectionStateChange(dynamic currentState, dynamic previousState) {
-    debugPrint('Connection state changed from $previousState to $currentState');
-  }
-
-  dynamic _onError(String message, int? code, dynamic error) {
-    debugPrint('Pusher error: $message, code: $code, details: $error');
-    return null;
-  }
-
-  void _onEvent(PusherEvent event) {
-    try {
-      if (event.data == null) return;
-      
-      final messageData = json.decode(event.data!);
-      final newMessage = Message.fromJson(messageData);
-      
-      if (newMessage.senderId == widget.user.id || 
-          newMessage.receiverId == widget.user.id) {
-        setState(() {
-          messages.insert(0, newMessage);
-        });
-      }
-    } catch (e) {
-      debugPrint('Message handling error: $e');
-    }
-  }
-
-  void _onSubscriptionSucceeded(String channelName, dynamic data) {
-    debugPrint('Successfully subscribed to $channelName');
-  }
-
-  void _onMemberAdded(String channelName, dynamic member) {
-    debugPrint('Member added to $channelName: $member');
-  }
-
-  void _onMemberRemoved(String channelName, dynamic member) {
-    debugPrint('Member removed from $channelName: $member');
-  }
-
-  Future<void> fetchMessages() async {
+  Future<void> _initializeChat() async {
   try {
-    final response = await http.get(
-      Uri.parse('http://192.168.2.34/api/messages/$currentUserId/${widget.user.id}'),
+    setState(() => _isLoading = true);
+    
+    _pusherService = PusherService(
+      authToken: widget.authToken,
+      onMessagesFetched: (messages) {
+        // Ensure messages is never null
+        final safeMessages = messages ?? [];
+        setState(() {
+          _messages = safeMessages;
+          _isLoading = false;
+          _hasError = false;
+        });
+        _scrollToBottom();
+      },
+      onError: (error) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${error ?? "Unknown error"}')),
+        );
+      },
     );
 
-    debugPrint('Response status: ${response.statusCode}');
-    debugPrint('Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      final List<dynamic> messageList = responseData['messages'] ?? [];
-      
-      setState(() {
-        messages = messageList.map((msg) => Message.fromJson(msg)).toList();
-      });
-    } else {
-      debugPrint('Failed to fetch messages: ${response.statusCode}');
-    }
+    await _pusherService!.initPusher(widget.userId.toString());
+    await _pusherService!.fetchMessages();
   } catch (e) {
-    debugPrint('Failed to fetch messages: $e');
+    setState(() {
+      _isLoading = false;
+      _hasError = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Initialization error: ${e.toString()}')),
+    );
   }
 }
 
-  Future<void> sendMessage() async {
-    if (_controller.text.trim().isEmpty) return;
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    final message = _messageController.text;
+    _messageController.clear();
 
     try {
-      final response = await http.post(
-        Uri.parse('http://192.168.2.34/api/messages'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'sender_id': currentUserId,
-          'receiver_id': widget.user.id,
-          'message': _controller.text.trim(),
-        }),
+      await _pusherService.sendMessage(
+        widget.userId.toString(),
+        message,
       );
-
-      if (response.statusCode == 201) {
-        _controller.clear();
-      }
+      // Message will be added via Pusher update
     } catch (e) {
-      debugPrint('Failed to send message: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send message')),
+      );
     }
   }
 
   @override
   void dispose() {
-    _pusher.disconnect();
-    _controller.dispose();
+    _pusherService.disconnect(widget.userId.toString());
+    _scrollController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Chat with ${widget.user.name}')),
+      appBar: AppBar(
+        title: const Text('Chat'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _pusherService.fetchMessages();
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
-            child: messages.isEmpty
-                ? const Center(child: Text('No messages yet'))
-                : ListView.builder(
-                    reverse: true,
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final isMe = msg.senderId == currentUserId;
-                      return _buildMessageBubble(msg, isMe);
-                    },
-                  ),
+            child: _hasError
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Failed to load messages'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() => _isLoading = true);
+                            _initializeChat();
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _messages.isEmpty
+                        ? const Center(child: Text('No messages yet'))
+                        : ListView.builder(
+                            controller: _scrollController,
+                            itemCount: _messages.length,
+                            itemBuilder: (context, index) {
+                              final message = _messages[index];
+                              return MessageBubble(
+                                content: message['content'],
+                                timestamp: message['created_at'],
+                                isMe: message['sender_id'] == widget.userId,
+                              );
+                            },
+                          ),
           ),
           _buildMessageInput(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMessageBubble(Message msg, bool isMe) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isMe ? Colors.blueAccent : Colors.grey[300],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              msg.message,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _formatTime(msg.createdAt),
-              style: TextStyle(
-                color: isMe ? Colors.white70 : Colors.black54,
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -206,28 +174,60 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: TextField(
-              controller: _controller,
-              decoration: InputDecoration(
+              controller: _messageController,
+              decoration: const InputDecoration(
                 hintText: 'Type a message...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                border: OutlineInputBorder(),
               ),
-              onSubmitted: (_) => sendMessage(),
+              onSubmitted: (_) => _sendMessage(),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.send, color: Colors.blue),
-            onPressed: sendMessage,
+            icon: const Icon(Icons.send),
+            onPressed: _sendMessage,
           ),
         ],
       ),
     );
   }
+}
 
-  String _formatTime(DateTime? time) {
-    if (time == null) return '';
-    return '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+class MessageBubble extends StatelessWidget {
+  final String content;
+  final String timestamp;
+  final bool isMe;
+
+  const MessageBubble({
+    required this.content,
+    required this.timestamp,
+    required this.isMe,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe ? Colors.blue[100] : Colors.grey[300],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Text(content),
+            const SizedBox(height: 4),
+            Text(
+              timestamp,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
