@@ -88,6 +88,23 @@ Future<List<User>> fetchGardeners() async {
       throw Exception('Failed to load service providers: ${response.body}');
     }
   }
+  // Save token to shared preferences
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token); // Use 'token' as the key
+  }
+
+  // Get token from shared preferences
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token'); // Use 'token' as the key
+  }
+
+  // Clear token (for logout)
+  static Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token'); // Use 'token' as the key
+  }
 
  Future<Map<String, String>> fetchProfileData(String userId) async {
   final prefs = await SharedPreferences.getInstance();

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -82,6 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // New method to handle logout
   void _logout() {
     showDialog(
       context: context,
@@ -98,11 +102,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             TextButton(
               onPressed: () {
+                // Add your logout logic here
                 Navigator.of(context).pop(); // Close the dialog
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => LoginScreen()),
-                ); // Navigate to the LoginScreen
+                ); // Navigate to the HomeownerScreen
               },
               child: const Text('Logout'),
             ),
@@ -111,6 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +242,115 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+class EditProfileScreen extends StatefulWidget {
+  final String name;
+  final String email;
+  final String address;
+  final String phone;
 
+  const EditProfileScreen({
+    Key? key,
+    required this.name,
+    required this.email,
+    required this.address,
+    required this.phone,
+  }) : super(key: key);
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _addressController;
+  late TextEditingController _phoneController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.name);
+    _emailController = TextEditingController(text: widget.email);
+    _addressController = TextEditingController(text: widget.address);
+    _phoneController = TextEditingController(text: widget.phone);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  void _saveChanges() {
+    final updatedProfile = {
+      'name': _nameController.text,
+      'email': _emailController.text,
+      'address': _addressController.text,
+      'phone': _phoneController.text,
+    };
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Saved Successfully"),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    // Delay navigation back to the profile screen
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pop(context, updatedProfile);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Edit Profile"),
+        backgroundColor: Colors.green,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: "Name"),
+            ),
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: "Email"),
+            ),
+            TextFormField(
+              controller: _addressController,
+              decoration: const InputDecoration(labelText: "Address"),
+            ),
+            TextFormField(
+              controller: _phoneController,
+              decoration: const InputDecoration(labelText: "Phone"),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _saveChanges,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+              child: const Text(
+                "Save Changes",
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class ProfileInfoCard extends StatelessWidget {
   final String name;
