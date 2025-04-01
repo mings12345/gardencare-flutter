@@ -7,7 +7,6 @@ import 'package:gardencare_app/screens/login_screen.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String name;
@@ -32,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late String email;
   late String address;
   late String phone;
-  File? _image; // To store the selected image
+  File? _image; // To store the selected imagezy
 
   @override
   void initState() {
@@ -86,34 +85,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // New method to handle logout
-  void _logout() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                // Add your logout logic here
-                Navigator.of(context).pop(); // Close the dialog
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                ); // Navigate to the HomeownerScreen
-              },
-              child: const Text('Logout'),
-            ),
-          ],
-        );
+  void _logout() async {
+  final token = await AuthService.getToken();
+  print("Retrieved Token: $token"); // Debugging: Print the token
+
+  if (token == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("No token found. Please log in again."),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    return;
+  }
+
+  try {
+    final response = await http.post(
+      Uri.parse('https://devjeffrey.dreamhosters.com/api/logout'),
+      headers: {
+        'Authorization': 'Bearer $token',
       },
+    );
+
+    print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
+    print("Response Body: ${response.body}"); // Debugging: Print response body
+
+    if (response.statusCode == 200) {
+      await AuthService.clearToken();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error: $e"),
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 }
@@ -242,69 +258,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class EditProfileScreen extends StatefulWidget {
-  final String name;
-  final String email;
-  final String address;
-  final String phone;
+    class EditProfileScreen extends StatefulWidget {
+      final String name;
+      final String email;
+      final String address;
+      final String phone;
 
-  const EditProfileScreen({
-    Key? key,
-    required this.name,
-    required this.email,
-    required this.address,
-    required this.phone,
-  }) : super(key: key);
+      const EditProfileScreen({
+        Key? key,
+        required this.name,
+        required this.email,
+        required this.address,
+        required this.phone,
+      }) : super(key: key);
 
-  @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
-}
+      @override
+      State<EditProfileScreen> createState() => _EditProfileScreenState();
+    }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _addressController;
-  late TextEditingController _phoneController;
+    class _EditProfileScreenState extends State<EditProfileScreen> {
+      late TextEditingController _nameController;
+      late TextEditingController _emailController;
+      late TextEditingController _addressController;
+      late TextEditingController _phoneController;
 
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.name);
-    _emailController = TextEditingController(text: widget.email);
-    _addressController = TextEditingController(text: widget.address);
-    _phoneController = TextEditingController(text: widget.phone);
-  }
+      @override
+      void initState() {
+        super.initState();
+        _nameController = TextEditingController(text: widget.name);
+        _emailController = TextEditingController(text: widget.email);
+        _addressController = TextEditingController(text: widget.address);
+        _phoneController = TextEditingController(text: widget.phone);
+      }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _addressController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
+      @override
+      void dispose() {
+        _nameController.dispose();
+        _emailController.dispose();
+        _addressController.dispose();
+        _phoneController.dispose();
+        super.dispose();
+      }
 
-  void _saveChanges() {
-    final updatedProfile = {
-      'name': _nameController.text,
-      'email': _emailController.text,
-      'address': _addressController.text,
-      'phone': _phoneController.text,
-    };
+        void _saveChanges() async {
+  final updatedProfile = {
+    'name': _nameController.text,
+    'email': _emailController.text,
+    'address': _addressController.text,
+    'phone': _phoneController.text,
+  };
 
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Saved Successfully"),
-        duration: Duration(seconds: 2),
-      ),
+  final token = await AuthService.getToken();
+  print("Retrieved Token: $token"); // Debugging: Print the token
+
+  try {
+    final response = await http.post( // Use POST if the server expects POST
+      Uri.parse('https://devjeffrey.dreamhosters.com/api/profile/update'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(updatedProfile),
     );
 
-    // Delay navigation back to the profile screen
-    Future.delayed(const Duration(seconds: 2), () {
+    print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
+    print("Response Body: ${response.body}"); // Debugging: Print response body
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Profile updated successfully!"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
       Navigator.pop(context, updatedProfile);
-    });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to update profile. Status Code: ${response.statusCode}"),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error: $e"),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
