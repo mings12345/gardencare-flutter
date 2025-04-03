@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http; // Add this import
+import 'dart:convert'; // Add this import for jsonEncode
 import '../services/pusher_service.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -32,7 +35,26 @@ class ChatScreenState extends State<ChatScreen> {
     super.initState();
     _scrollController = ScrollController();
     _initializeChat();
+     _markMessagesAsRead();
   }
+    // Add this to your ChatScreen's initState
+    Future<void> _markMessagesAsRead() async {
+      try {
+        await http.post(
+          Uri.parse('${dotenv.get('BASE_URL')}/api/messages/mark-read'),
+          headers: {
+            'Authorization': 'Bearer ${widget.authToken}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'sender_id': widget.otherUserId,
+            'receiver_id': widget.currentUserId,
+          }),
+        );
+      } catch (e) {
+        print('Error marking messages as read: $e');
+      }
+    }
 
   Future<void> _initializeChat() async {
     try {

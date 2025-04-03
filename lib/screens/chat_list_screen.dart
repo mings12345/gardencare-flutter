@@ -3,6 +3,7 @@ import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/screens/chat_screen.dart';
 import 'package:gardencare_app/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class ChatListScreen extends StatefulWidget {
   @override
@@ -14,18 +15,64 @@ class _ChatListScreenState extends State<ChatListScreen> {
   bool isLoading = true;
   String? infoMessage;
   int? currentUserId;
-  String? authToken; // Added to store the auth token
+  String? currentUserRole;
+  String? authToken;
   final AuthService _authService = AuthService();
+  
+  // Track unread messages count for each user
+  Map<int, int> unreadCounts = {};
 
   @override
   void initState() {
     super.initState();
     _initializeData();
+    // Start periodic checks for new messages
+    _startMessageChecker();
   }
 
+  @override
+  void dispose() {
+    // Cancel any ongoing timers or listeners
+    _messageTimer?.cancel();
+    super.dispose();
+  }
+
+  Timer? _messageTimer;
+  
+  void _startMessageChecker() {
+  // Check immediately when screen loads
+  _checkForNewMessages();
+  
+  // Then check every 30 seconds (adjust as needed)
+  _messageTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    if (!mounted) return;
+    _checkForNewMessages();
+  });
+}
+
+  Future<void> _checkForNewMessages() async {
+  if (currentUserId == null) return;
+  
+  try {
+    final counts = await _authService.getUnreadCounts(currentUserId!);
+    
+    if (mounted) {
+      setState(() {
+        unreadCounts = counts;
+      });
+    }
+  } catch (e) {
+    print('Error checking messages: $e');
+    // Optionally show a snackbar if you want to notify the user
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(content: Text('Failed to check for new messages')));
+  }
+}
+
   Future<void> _initializeData() async {
-    await _loadCurrentUserData(); // Combined user ID and token loading
+    await _loadCurrentUserData();
     await _fetchChatUsers();
+    await _checkForNewMessages();
   }
 
   Future<void> _loadCurrentUserData() async {
@@ -33,6 +80,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     setState(() {
       currentUserId = prefs.getInt('userId');
       authToken = prefs.getString('token');
+      currentUserRole = prefs.getString('userRole');
     });
   }
 
@@ -43,31 +91,31 @@ class _ChatListScreenState extends State<ChatListScreen> {
         infoMessage = null;
       });
 
-      List<User> allUsers = [];
-      bool serviceProvidersAvailable = true;
+      final role = currentUserRole?.toLowerCase();
+      List<User> filteredUsers = [];
 
-      // Fetch gardeners
-      try {
-        final gardeners = await _authService.fetchGardeners();
-        allUsers.addAll(gardeners);
-      } catch (e) {
-        print('Error fetching gardeners: $e');
-        setState(() {
-          infoMessage = 'Unable to load gardeners at this time';
-        });
+      if (role == 'homeowner') {
+        try {
+          filteredUsers.addAll(await _authService.fetchGardeners());
+        } catch (e) {
+          print('Error fetching gardeners: $e');
+        }
+
+        try {
+          filteredUsers.addAll(await _authService.fetchServiceProviders());
+        } catch (e) {
+          print('Error fetching service providers: $e');
+        }
+      } 
+      else if (role == 'gardener' || role == 'service_provider') {
+        try {
+          filteredUsers.addAll(await _authService.fetchHomeowners());
+        } catch (e) {
+          print('Error fetching homeowners: $e');
+        }
       }
 
-      // Fetch service providers
-      try {
-        final providers = await _authService.fetchServiceProviders();
-        allUsers.addAll(providers);
-      } catch (e) {
-        print('Service providers not available: $e');
-        serviceProvidersAvailable = false;
-      }
-
-      // Filter current user and duplicates
-      final filteredUsers = allUsers
+      filteredUsers = filteredUsers
           .where((user) => user.id != currentUserId)
           .toSet()
           .toList();
@@ -77,29 +125,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
         isLoading = false;
         
         if (users.isEmpty) {
-          infoMessage = 'No professionals available for chat';
-        } else if (!serviceProvidersAvailable) {
-          infoMessage = 'Showing gardeners (service providers unavailable)';
+          infoMessage = role == 'homeowner' 
+              ? 'No professionals available for chat'
+              : 'No homeowners available for chat';
         }
       });
     } catch (e) {
       setState(() {
-        infoMessage = 'Error loading professionals';
+        infoMessage = 'Error loading users';
         isLoading = false;
       });
-      print('Error fetching users: $e');
+      print('Error in _fetchChatUsers: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    String appBarTitle = "Available ";
+    appBarTitle += currentUserRole == 'homeowner' ? "Professionals" : "Homeowners";
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Available Professionals"),
+        title: Text(appBarTitle),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: _fetchChatUsers,
+            onPressed: () {
+              _fetchChatUsers();
+              _checkForNewMessages();
+            },
           ),
         ],
       ),
@@ -137,7 +191,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("No professionals available"),
+                      Text("No users available"),
                       SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _fetchChatUsers,
@@ -150,6 +204,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   itemCount: users.length,
                   itemBuilder: (context, index) {
                     final user = users[index];
+                    final unreadCount = unreadCounts[user.id] ?? 0;
+                    
                     return Card(
                       margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       child: ListTile(
@@ -166,33 +222,45 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         subtitle: Text(
                           user.userType == 'gardener' 
                               ? 'Gardener' 
-                              : 'Service Provider',
+                              : user.userType == 'service_provider'
+                                ? 'Service Provider'
+                                : 'Homeowner',
                         ),
-                        trailing: Icon(Icons.chat_bubble_outline),
+                        trailing: _buildNotificationBadge(unreadCount),
                         onTap: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    final currentToken = prefs.getString('token') ?? '';
-                    final currentUserId = prefs.getInt('userId'); // 👈 Get current user ID
-                    
-                    if (currentToken.isEmpty || currentUserId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Authentication required'))
-                      );
-                      return;
-                    }
+                          final prefs = await SharedPreferences.getInstance();
+                          final currentToken = prefs.getString('token') ?? '';
+                          final currentUserId = prefs.getInt('userId');
+                          
+                          if (currentToken.isEmpty || currentUserId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Authentication required'))
+                            );
+                            return;
+                          }
 
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatScreen(
-                          currentUserId: currentUserId,  // 👈 Your logged-in user
-                          otherUserId: user.id,         // 👈 The professional you're chatting with
-                          authToken: currentToken,
-                          userId: user.id,              // 👈 Added the required userId argument
-                        ),
-                      ),
-                    );
-                  },
+                          // Clear unread count when opening chat
+                          if (unreadCount > 0) {
+                            setState(() {
+                              unreadCounts[user.id] = 0;
+                            });
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                currentUserId: currentUserId,
+                                otherUserId: user.id,
+                                authToken: currentToken,
+                                userId: user.id,
+                              ),
+                            ),
+                          ).then((_) {
+                            // When returning from chat screen, check for new messages
+                            _checkForNewMessages();
+                          });
+                        },
                       ),
                     );
                   },
@@ -201,5 +269,40 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ],
     );
   }
-}
 
+  Widget _buildNotificationBadge(int count) {
+    if (count <= 0) {
+      return Icon(Icons.chat_bubble_outline);
+    }
+    
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Icon(Icons.chat_bubble_outline),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: Container(
+            padding: EdgeInsets.all(2),
+            constraints: const BoxConstraints(
+              minWidth: 16,
+              minHeight: 16,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              count > 9 ? '9+' : count.toString(),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        )
+    ],
+    );
+  }
+}

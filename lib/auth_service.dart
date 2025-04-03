@@ -31,6 +31,7 @@ class AuthService {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', token);
         await prefs.setInt('userId', user.id);
+        await prefs.setString('userRole', user.userType);
         print('Token saved: $token'); // Debugging line
 
         return user;
@@ -47,6 +48,30 @@ class AuthService {
       rethrow;
     }
   } 
+
+      Future<Map<int, int>> getUnreadCounts(int userId) async {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('No token found. Please log in again.');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/messages/unread-counts/$userId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final counts = data['unread_counts'] as Map<String, dynamic>;
+        
+        // Convert string keys to integers
+        return counts.map((key, value) => MapEntry(int.parse(key), value as int));
+      } else {
+        throw Exception('Failed to load unread counts: ${response.body}');
+      }
+    }
 
   Future<List<User>> fetchGardeners() async {
     final prefs = await SharedPreferences.getInstance();
