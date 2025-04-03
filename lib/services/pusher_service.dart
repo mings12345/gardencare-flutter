@@ -11,13 +11,15 @@ class PusherService {
   final Function(String)? onError;
   // Define _channel field
   late PusherChannel _channel;
+  late String _currentUserId; 
 
   PusherService({
     required this.authToken,
     required this.onMessagesFetched,
     this.onError,
-  });
-
+    required String currentUserId,
+  }) : _currentUserId = currentUserId;
+  
   Future<void> initPusher(String userId) async {
     try {
 
@@ -42,7 +44,7 @@ class PusherService {
 
     // Subscribe to private channel and bind events
         _channel = await pusher.subscribe(
-          channelName: 'user.3',
+          channelName: 'user.$userId',
           onEvent: (event) {
             // Handle all events
             _handleEvent(event);
@@ -66,15 +68,34 @@ class PusherService {
     print('Event received: ${event.eventName} - ${event.data}');
   }
 
-  void _handleMessageEvent(PusherEvent event) {
-    print('New message event: ${event.data}');
-    fetchMessages();
-  }
+      void _handleMessageEvent(PusherEvent event) {
+        print('New message event: ${event.data}');
+        
+    try {
+      // Parse the event data (which comes from broadcastWith() in PHP)
+      final Map<String, dynamic> messageData = json.decode(event.data);
+      
+      // Extract sender and receiver IDs from the message
+      final String senderId = messageData['sender_id']?.toString() ?? '';
+      final String receiverId = messageData['receiver_id']?.toString() ?? '';
+      
+      if (senderId.isEmpty || receiverId.isEmpty) {
+        throw Exception('Missing sender_id or receiver_id in message data');
+      }
+      
+      // Fetch the updated conversation
+      fetchMessages(senderId, receiverId);
+      
+    } catch (e) {
+      print('Error handling message event: $e');
+      onError?.call('Failed to process new message: ${e.toString()}');
+    }
+      }
 
-  Future<List<dynamic>> fetchMessages() async {
+   Future<List<dynamic>> fetchMessages(String senderId, String recipientId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/messages/2/3'),
+        Uri.parse('$baseUrl/api/messages/$senderId/$recipientId'), // Use dynamic IDs
         headers: {
           'Authorization': 'Bearer $authToken',
           'Accept': 'application/json',
@@ -84,11 +105,10 @@ class PusherService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
 
-        // Extract the messages list from the response
         if (jsonResponse.containsKey('messages') && jsonResponse['messages'] is List) {
           final List<dynamic> messages = jsonResponse['messages'];
           
-          onMessagesFetched(messages); // Pass the extracted messages to the callback
+          onMessagesFetched(messages);
           return messages;
         } else {
           throw Exception('Unexpected response structure: ${response.body}');
@@ -113,8 +133,9 @@ class PusherService {
           'Accept': 'application/json',
         },
         body: json.encode({
-          'recipient_id': recipientId,
-          'content': content,
+        'sender_id': _currentUserId.toString(), // Use the initialized field
+        'receiver_id': recipientId, // Changed from 'recipient_id'
+        'message': content, // Ensure this matches Laravel's expected key
         }),
       );
 

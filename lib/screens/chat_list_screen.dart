@@ -170,27 +170,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         ),
                         trailing: Icon(Icons.chat_bubble_outline),
                         onTap: () async {
-                          // Get the latest token when navigating
-                          final prefs = await SharedPreferences.getInstance();
-                          final currentToken = prefs.getString('token') ?? '';
-                          
-                          if (currentToken.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Authentication required'))
-                            );
-                            return;
-                          }
+                    final prefs = await SharedPreferences.getInstance();
+                    final currentToken = prefs.getString('token') ?? '';
+                    final currentUserId = prefs.getInt('userId'); // 👈 Get current user ID
+                    
+                    if (currentToken.isEmpty || currentUserId == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Authentication required'))
+                      );
+                      return;
+                    }
 
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatScreen(
-                                userId: user.id,
-                                authToken: currentToken,
-                              ),
-                            ),
-                          );
-                        },
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatScreen(
+                          currentUserId: currentUserId,  // 👈 Your logged-in user
+                          otherUserId: user.id,         // 👈 The professional you're chatting with
+                          authToken: currentToken,
+                          userId: user.id,              // 👈 Added the required userId argument
+                        ),
+                      ),
+                    );
+                  },
                       ),
                     );
                   },

@@ -3,11 +3,15 @@ import '../services/pusher_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final int userId;
+  final int currentUserId;  // 👈 Your logged-in user
+  final int otherUserId; 
   final String authToken;
 
   const ChatScreen({
     required this.userId,
     required this.authToken,
+    required this.currentUserId,
+    required this.otherUserId,
     Key? key,
   }) : super(key: key);
 
@@ -36,6 +40,7 @@ class ChatScreenState extends State<ChatScreen> {
       
       _pusherService = PusherService(
         authToken: widget.authToken,
+        currentUserId: widget.currentUserId.toString(), // Pass the required argument
         onMessagesFetched: (messages) {
           print('Messages fetched: $messages');
           final safeMessages = messages.map((message) {
@@ -78,7 +83,8 @@ class ChatScreenState extends State<ChatScreen> {
       );
 
       await _pusherService.initPusher(widget.userId.toString());
-      await _pusherService.fetchMessages();
+      await _pusherService.fetchMessages( widget.currentUserId.toString(), 
+      widget.otherUserId.toString(), );
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -103,22 +109,27 @@ class ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
+  if (_messageController.text.trim().isEmpty) return;
 
-    final message = _messageController.text;
-    _messageController.clear();
+  final message = _messageController.text;
+  _messageController.clear();
 
-    try {
-      await _pusherService.sendMessage(
-        widget.userId.toString(),
-        message,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send message')),
-      );
-    }
+  try {
+    await _pusherService.sendMessage(
+      widget.otherUserId.toString(),
+      message,
+    );
+    // Optional: Refresh messages after sending
+    await _pusherService.fetchMessages(
+      widget.currentUserId.toString(),
+      widget.otherUserId.toString(),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to send message: ${e.toString()}')),
+    );
   }
+}
 
   @override
   void dispose() {
@@ -138,7 +149,8 @@ class ChatScreenState extends State<ChatScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: () {
               setState(() => _isLoading = true);
-              _pusherService.fetchMessages();
+              _pusherService.fetchMessages( widget.currentUserId.toString(), 
+        widget.otherUserId.toString(), );
             },
           ),
         ],
@@ -175,7 +187,7 @@ class ChatScreenState extends State<ChatScreen> {
                               return MessageBubble(
                                 content: message['message'] ?? '',
                                 timestamp: message['created_at'] ?? '',
-                                isMe: message['sender_id'] == widget.userId,
+                                isMe: message['sender_id'] == widget.currentUserId,
                               );
                             },
                           ),
