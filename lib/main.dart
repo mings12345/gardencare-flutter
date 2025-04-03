@@ -44,8 +44,8 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/admin-dashboard': (context) => const AdminDashboardScreen(),
-        '/': (context) => const OnboardingScreen(),
-        '/login': (context) => LoginScreen(),
+        '/onboarding-screen': (context) => const OnboardingScreen(),
+        '/': (context) => LoginScreen(),
         '/profile': (context) => const ProfileScreen(
               name: 'John Doe',
               email: 'john.doe@example.com',

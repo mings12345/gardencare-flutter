@@ -263,6 +263,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final String email;
       final String address;
       final String phone;
+       final File? image;
 
       const EditProfileScreen({
         Key? key,
@@ -270,6 +271,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         required this.email,
         required this.address,
         required this.phone,
+        this.image,
       }) : super(key: key);
 
       @override

@@ -9,6 +9,7 @@ class PusherService {
   final String authToken;
   final Function(List<dynamic>) onMessagesFetched;
   final Function(String)? onError;
+  // Define _channel field
   late PusherChannel _channel;
 
   PusherService({
@@ -41,7 +42,7 @@ class PusherService {
 
     // Subscribe to private channel and bind events
         _channel = await pusher.subscribe(
-          channelName: 'user.$userId',
+          channelName: 'user.3',
           onEvent: (event) {
             // Handle all events
             _handleEvent(event);
@@ -81,9 +82,17 @@ class PusherService {
       );
 
       if (response.statusCode == 200) {
-        final messages = json.decode(response.body) as List<dynamic>;
-        onMessagesFetched(messages);
-        return messages;
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+
+        // Extract the messages list from the response
+        if (jsonResponse.containsKey('messages') && jsonResponse['messages'] is List) {
+          final List<dynamic> messages = jsonResponse['messages'];
+          
+          onMessagesFetched(messages); // Pass the extracted messages to the callback
+          return messages;
+        } else {
+          throw Exception('Unexpected response structure: ${response.body}');
+        }
       } else {
         throw Exception('Failed to load messages: ${response.statusCode}');
       }
@@ -121,16 +130,12 @@ class PusherService {
 
 Future<void> disconnect(String userId) async {
   try {
-    if (_channel != null) {
-      // Store the channel name before unsubscribing if needed
-      final channelName = 'user.$userId'; // Use the same pattern you used in initPusher()
-      
-      // No need to explicitly unbind in most cases - unsubscribing handles it
-      await pusher.unsubscribe(channelName: channelName);
-      print('Unsubscribed from channel: $channelName');
-    } else {
-      print('No channel to unsubscribe from');
-    } 
+    // Store the channel name before unsubscribing if needed
+    final channelName = 'user.$userId'; // Use the same pattern you used in initPusher()
+    
+    // No need to explicitly unbind in most cases - unsubscribing handles it
+    await pusher.unsubscribe(channelName: channelName);
+    print('Unsubscribed from channel: $channelName');
     await pusher.disconnect();
     print('Pusher disconnected successfully');
   } catch (e) {

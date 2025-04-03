@@ -31,44 +31,64 @@ class ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initializeChat() async {
-  try {
-    setState(() => _isLoading = true);
-    
-    _pusherService = PusherService(
-      authToken: widget.authToken,
-      onMessagesFetched: (messages) {
-        // Ensure messages is never null
-        final safeMessages = messages ?? [];
-        setState(() {
-          _messages = safeMessages;
-          _isLoading = false;
-          _hasError = false;
-        });
-        _scrollToBottom();
-      },
-      onError: (error) {
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${error ?? "Unknown error"}')),
-        );
-      },
-    );
+    try {
+      setState(() => _isLoading = true);
+      
+      _pusherService = PusherService(
+        authToken: widget.authToken,
+        onMessagesFetched: (messages) {
+          print('Messages fetched: $messages');
+          final safeMessages = messages.map((message) {
+            return {
+              'id': message['id'],
+              'sender_id': message['sender_id'],
+              'receiver_id': message['receiver_id'],
+              'message': message['message'] ?? '', // Handle null message
+              'is_read': message['is_read'] ?? false, // Handle null is_read
+              'read_at': message['read_at'] ?? '', // Handle null read_at
+              'created_at': message['created_at'] ?? '', // Handle null created_at
+              'sender': {
+                'id': message['sender']['id'],
+                'name': message['sender']['name'] ?? 'Unknown',
+                'profile_picture_url': message['sender']['profile_picture_url'] ?? '',
+              },
+              'receiver': {
+                'id': message['receiver']['id'],
+                'name': message['receiver']['name'] ?? 'Unknown',
+              },
+            };
+          }).toList();
+          
+          setState(() {
+            _messages = safeMessages;
+            _isLoading = false;
+            _hasError = false;
+          });
+          _scrollToBottom();
+        },
+        onError: (error) {
+          setState(() {
+            _isLoading = false;
+            _hasError = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $error')),
+          );
+        },
+      );
 
-    await _pusherService!.initPusher(widget.userId.toString());
-    await _pusherService!.fetchMessages();
-  } catch (e) {
-    setState(() {
-      _isLoading = false;
-      _hasError = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Initialization error: ${e.toString()}')),
-    );
+      await _pusherService.initPusher(widget.userId.toString());
+      await _pusherService.fetchMessages();
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Initialization error: ${e.toString()}')),
+      );
+    }
   }
-}
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -93,7 +113,6 @@ class ChatScreenState extends State<ChatScreen> {
         widget.userId.toString(),
         message,
       );
-      // Message will be added via Pusher update
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send message')),
@@ -154,8 +173,8 @@ class ChatScreenState extends State<ChatScreen> {
                             itemBuilder: (context, index) {
                               final message = _messages[index];
                               return MessageBubble(
-                                content: message['content'],
-                                timestamp: message['created_at'],
+                                content: message['message'] ?? '',
+                                timestamp: message['created_at'] ?? '',
                                 isMe: message['sender_id'] == widget.userId,
                               );
                             },
