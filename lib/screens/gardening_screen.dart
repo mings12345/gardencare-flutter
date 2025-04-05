@@ -35,12 +35,7 @@ class _GardeningScreenState extends State<GardeningScreen> {
     },
   ];
 
-  final List<Map<String, String>> availableGardeners = [
-    {'name': 'Dwight', 'experience': '5 years', 'rating': '4.8', 'image': 'assets/images/Dwight.jpg'},
-    {'name': 'Nikki', 'experience': '5 years', 'rating': '5.3', 'image': 'assets/images/Nikki.jpg'},
-    {'name': 'Nina', 'experience': '4 years', 'rating': '4.3', 'image': 'assets/images/Nina.jpg'},
-    {'name': 'JL', 'experience': '4 years', 'rating': '4.3', 'image': 'assets/images/Pain.jpg'},
-  ];
+
 
   List<Map<String, String>> filteredServices = [];
 
@@ -185,7 +180,6 @@ class _GardeningScreenState extends State<GardeningScreen> {
                                         serviceImage: service['image_url']!,
                                         price: service['price']!,
                                         serviceType: 'Gardening', // Add the required serviceType argument
-                                        availableGardeners: availableGardeners, // Pass the gardener list
                                       ),
                                     ),
                                   );

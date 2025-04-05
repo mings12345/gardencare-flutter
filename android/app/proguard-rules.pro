@@ -16,10 +16,11 @@
 -keep class com.pusher.pushnotifications.** { *; }
 
 # Keep Play Core classes (required for Flutter deferred components)
--keep class com.google.android.play.core.** { *; }
 -keep class com.google.android.play.core.splitcompat.** { *; }
 -keep class com.google.android.play.core.splitinstall.** { *; }
 -keep class com.google.android.play.core.tasks.** { *; }
+-keep class com.google.android.play.core.** { *; }
+-keep class com.google.android.play.** { *; }
 
 # Additional rules for Firebase and Pusher
 -keep class com.google.firebase.** { *; }

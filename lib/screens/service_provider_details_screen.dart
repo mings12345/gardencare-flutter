@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/models/user.dart';
 
-class GardenerDetailsScreen extends StatelessWidget {
-  final User gardener;
+class ServiceProviderDetailsScreen extends StatelessWidget {
+  final User provider;
 
-  const GardenerDetailsScreen({Key? key, required this.gardener}) : super(key: key);
+  const ServiceProviderDetailsScreen({Key? key, required this.provider}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(gardener.name),
+        title: Text(provider.name),
         backgroundColor: Colors.green[800],
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -43,14 +43,14 @@ class GardenerDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    gardener.name,
+                    provider.name,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    gardener.email,
+                    provider.email,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16,
@@ -67,9 +67,9 @@ class GardenerDetailsScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildRatingStat('4.8', 'Average Rating'),
-                _buildRatingStat('24', 'Completed Jobs'),
-                _buildRatingStat('2', 'Years Experience'),
+                _buildRatingStat('4.9', 'Average Rating'),
+                _buildRatingStat('32', 'Completed Jobs'),
+                _buildRatingStat('3', 'Years Experience'),
               ],
             ),
             const SizedBox(height: 24),
@@ -80,7 +80,7 @@ class GardenerDetailsScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
-                gardener.bio ?? 'Professional gardener with extensive experience in care.',
+                provider.bio ?? 'Professional service provider with extensive experience in landscaping and garden care.',
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.grey[700],
@@ -98,9 +98,9 @@ class GardenerDetailsScreen extends StatelessWidget {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _buildWorkImage('assets/images/garden1.jpg'),
-                  _buildWorkImage('assets/images/garden2.jpg'),
-                  _buildWorkImage('assets/images/garden3.jpg'),
+                  _buildWorkImage('assets/images/landscape1.jpg'),
+                  _buildWorkImage('assets/images/landscape2.jpg'),
+                  _buildWorkImage('assets/images/landscape3.jpg'),
                 ],
               ),
             ),
@@ -122,7 +122,7 @@ class GardenerDetailsScreen extends StatelessWidget {
                   // Implement contact functionality
                 },
                 child: const Text(
-                  'Contact Gardener',
+                  'Contact Provider',
                   style: TextStyle(fontSize: 18),
                 ),
               ),

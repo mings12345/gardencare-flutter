@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:gardencare_app/auth_service.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class EditProfileScreen extends StatefulWidget {
   final String name;
@@ -29,10 +30,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _emailController;
   late TextEditingController _addressController;
   late TextEditingController _phoneController;
-  File? _image;
-
-  // Update this URL based on your environment
-  final String _updateProfileUrl = "http://192.168.2.20:8000/api/update-profile"; // For physical devices on the same network
 
   @override
   void initState() {
@@ -41,7 +38,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController = TextEditingController(text: widget.email);
     _addressController = TextEditingController(text: widget.address);
     _phoneController = TextEditingController(text: widget.phone);
-    _image = widget.image;
   }
 
   @override
@@ -53,58 +49,55 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
-    }
-  }
+  void _saveChanges() async {
+    final updatedProfile = {
+      'name': _nameController.text,
+      'email': _emailController.text,
+      'address': _addressController.text,
+      'phone': _phoneController.text,
+      'image': widget.image, // Include the image in the updated profile
+    };
 
-  Future<void> _saveChanges() async {
+    final token = await AuthService.getToken();
+    print("Retrieved Token: $token"); // Debugging: Print the token
+
     try {
-      var request = http.MultipartRequest('POST', Uri.parse(_updateProfileUrl))
-        ..headers['Accept'] = 'application/json'
-        ..headers['Content-Type'] = 'multipart/form-data';
+      final response = await http.post(
+        Uri.parse('https://devjeffrey.dreamhosters.com/api/profile/update'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(updatedProfile),
+      );
 
-      // Add form fields
-      request.fields['name'] = _nameController.text;
-      request.fields['email'] = _emailController.text;
-      request.fields['address'] = _addressController.text;
-      request.fields['phone'] = _phoneController.text;
-
-      // Add image if selected
-      if (_image != null) {
-        request.files.add(await http.MultipartFile.fromPath('image', _image!.path));
-      }
-
-      // Send request with a timeout of 30 seconds
-      var response = await request.send().timeout(Duration(seconds: 30));
-      var responseBody = await response.stream.bytesToString();
+      print("Response Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
-        var responseData = json.decode(responseBody);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'] ?? 'Profile updated successfully')),
+          const SnackBar(
+            content: Text("Profile updated successfully!"),
+            duration: Duration(seconds: 2),
+          ),
         );
-        Navigator.pop(context, {
-          'name': _nameController.text,
-          'email': _emailController.text,
-          'address': _addressController.text,
-          'phone': _phoneController.text,
-          'image': _image,
-        });
+
+        Navigator.pop(context, updatedProfile);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: ${response.reasonPhrase}')),
+          SnackBar(
+            content: Text("Failed to update profile. Status Code: ${response.statusCode}"),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(
+          content: Text("Error: $e"),
+          duration: const Duration(seconds: 2),
+        ),
       );
-      print('Error details: $e'); // Print the full error details
     }
   }
 
@@ -119,20 +112,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _image != null
-                    ? FileImage(_image!)
-                    : const AssetImage('assets/images/violet.jpg') as ImageProvider,
-              ),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: "Name"),
             ),
-            const SizedBox(height: 16),
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: "Name")),
-            TextFormField(controller: _emailController, decoration: const InputDecoration(labelText: "Email")),
-            TextFormField(controller: _addressController, decoration: const InputDecoration(labelText: "Address")),
-            TextFormField(controller: _phoneController, decoration: const InputDecoration(labelText: "Phone")),
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: "Email"),
+            ),
+            TextFormField(
+              controller: _addressController,
+              decoration: const InputDecoration(labelText: "Address"),
+            ),
+            TextFormField(
+              controller: _phoneController,
+              decoration: const InputDecoration(labelText: "Phone"),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _saveChanges,
@@ -140,7 +135,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 backgroundColor: Colors.green,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
-              child: const Text("Save Changes", style: TextStyle(fontSize: 16)),
+              child: const Text(
+                "Save Changes",
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ],
         ),

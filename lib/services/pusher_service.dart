@@ -50,7 +50,7 @@ class PusherService {
             _handleEvent(event);
             print(event);
             // Specifically handle NewMessage events
-            if (event.eventName == 'App\\Events\\NewMessage') {
+            if (event.eventName == 'NewMessage') {
               _handleMessageEvent(event);
             }
           },

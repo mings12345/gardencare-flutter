@@ -358,13 +358,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
   }
 
   void _navigateToGardeningService(BuildContext context, String title, String description, String image, String price) {
-    final List<Map<String, String>> availableGardeners = [
-      {'name': 'Dwight', 'experience': '5 years', 'rating': '4.8', 'image': 'assets/images/Dwight.jpg'},
-      {'name': 'Nikki', 'experience': '5 years', 'rating': '5.3', 'image': 'assets/images/Nikki.jpg'},
-      {'name': 'Nina', 'experience': '4 years', 'rating': '4.3', 'image': 'assets/images/Nina.jpg'},
-      {'name': 'JL', 'experience': '4 years', 'rating': '4.3', 'image': 'assets/images/Pain.jpg'},
-    ];
-
+  
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -374,45 +368,13 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           serviceImage: image,
           price: price,
           serviceType: 'Gardening',
-          availableGardeners: availableGardeners,
         ),
       ),
     );
   }
 
   void _navigateToLandscapingService(BuildContext context, String title, String description, String image, String price) {
-    final List<Map<String, String>> serviceProviders = [
-      {
-        'name': 'Green Thumb Landscaping',
-        'experience': '10 years',
-        'rating': '4.9',
-        'image': 'assets/images/lands1.jpg',
-      },
-      {
-        'name': 'Eco Garden Services',
-        'experience': '8 years',
-        'rating': '4.7',
-        'image': 'assets/images/lands2.jpg',
-      },
-      {
-        'name': 'Nature’s Touch Lawn Care',
-        'experience': '12 years',
-        'rating': '4.8',
-        'image': 'assets/images/lands3.jpg',
-      },
-      {
-        'name': 'Goys Landscaping service',
-        'experience': '5 years',
-        'rating': '4.5',
-        'image': 'assets/images/lands4.jpg',
-      },
-      {
-        'name': 'Alice Landscaping',
-        'experience': '29 years',
-        'rating': '4.5',
-        'image': 'assets/images/lands5.jpg',
-      },
-    ];
+  
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -422,7 +384,6 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           serviceImage: image,
           price: price,
           serviceType: 'Landscaping',
-          serviceProviders: serviceProviders,
         ),
       ),
     );

@@ -47,39 +47,7 @@ class _LandscapingScreenState extends State<LandscapingScreen> {
     },
   ];
 
-  final List<Map<String, String>> serviceProviders = [
-    {
-      'name': 'Green Thumb Landscaping',
-      'experience': '10 years',
-      'rating': '4.9',
-      'image': 'assets/images/lands1.jpg',
-    },
-    {
-      'name': 'Eco Garden Services',
-      'experience': '8 years',
-      'rating': '4.7',
-      'image': 'assets/images/lands2.jpg',
-    },
-    {
-      'name': 'Nature’s Touch Lawn Care',
-      'experience': '12 years',
-      'rating': '4.8',
-      'image': 'assets/images/lands3.jpg',
-    },
-    {
-      'name': 'Goys Landscaping service',
-      'experience': '5 years',
-      'rating': '4.5',
-      'image': 'assets/images/lands4.jpg',
-    },
-     {
-      'name': 'Alice Landscaping',
-      'experience': '29 years',
-      'rating': '4.5',
-      'image': 'assets/images/lands5.jpg',
-    },
-  ];
-
+  
   List<Map<String, String>> filteredServices = [];
 
   @override
@@ -214,7 +182,6 @@ class _LandscapingScreenState extends State<LandscapingScreen> {
                                         serviceDescription: service['description']!,
                                         serviceImage: service['image_url']!,
                                         price: service['price']!,
-                                        serviceProviders: serviceProviders, // Pass the service providers list
                                         serviceType: 'Landscaping', // Add the required serviceType argument
                                       ),
                                     ),

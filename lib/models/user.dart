@@ -6,6 +6,7 @@ class User {
   final String userType;
   final int id;
   final String? profilePictureUrl; // Nullable field
+   final String? bio;
 
   User({
     required this.name,
@@ -15,6 +16,7 @@ class User {
     required this.userType,
     required this.id,
     this.profilePictureUrl,
+     this.bio,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class User {
       userType: json['user_type'] ?? '',
       id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
       profilePictureUrl: json['profile_picture_url'],
+       bio: json['bio'],
     );
   }
 }

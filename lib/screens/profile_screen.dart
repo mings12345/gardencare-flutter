@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
+import 'package:gardencare_app/screens/edit_profile_screen.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'dart:io';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ProfileScreen extends StatefulWidget {
@@ -252,148 +252,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Icon(Icons.arrow_forward, color: Colors.grey),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-    class EditProfileScreen extends StatefulWidget {
-      final String name;
-      final String email;
-      final String address;
-      final String phone;
-       final File? image;
-
-      const EditProfileScreen({
-        Key? key,
-        required this.name,
-        required this.email,
-        required this.address,
-        required this.phone,
-        this.image,
-      }) : super(key: key);
-
-      @override
-      State<EditProfileScreen> createState() => _EditProfileScreenState();
-    }
-
-    class _EditProfileScreenState extends State<EditProfileScreen> {
-      late TextEditingController _nameController;
-      late TextEditingController _emailController;
-      late TextEditingController _addressController;
-      late TextEditingController _phoneController;
-
-      @override
-      void initState() {
-        super.initState();
-        _nameController = TextEditingController(text: widget.name);
-        _emailController = TextEditingController(text: widget.email);
-        _addressController = TextEditingController(text: widget.address);
-        _phoneController = TextEditingController(text: widget.phone);
-      }
-
-      @override
-      void dispose() {
-        _nameController.dispose();
-        _emailController.dispose();
-        _addressController.dispose();
-        _phoneController.dispose();
-        super.dispose();
-      }
-
-        void _saveChanges() async {
-  final updatedProfile = {
-    'name': _nameController.text,
-    'email': _emailController.text,
-    'address': _addressController.text,
-    'phone': _phoneController.text,
-  };
-
-  final token = await AuthService.getToken();
-  print("Retrieved Token: $token"); // Debugging: Print the token
-
-  try {
-    final response = await http.post( // Use POST if the server expects POST
-      Uri.parse('https://devjeffrey.dreamhosters.com/api/profile/update'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(updatedProfile),
-    );
-
-    print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
-    print("Response Body: ${response.body}"); // Debugging: Print response body
-
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Profile updated successfully!"),
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      Navigator.pop(context, updatedProfile);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to update profile. Status Code: ${response.statusCode}"),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error: $e"),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-}
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Edit Profile"),
-        backgroundColor: Colors.green,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: "Name"),
-            ),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: "Email"),
-            ),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(labelText: "Address"),
-            ),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: "Phone"),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _saveChanges,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-              child: const Text(
-                "Save Changes",
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
         ),
       ),
     );
