@@ -30,6 +30,22 @@ class PusherService {
       await pusher.init(
         apiKey: '9b6cf6a0eecc032de3a0',
         cluster: 'ap1',
+              onAuthorizer: (String channelName, String socketId, dynamic options) async {
+        // Call your Laravel auth endpoint
+        final response = await http.post(
+          Uri.parse('$baseUrl/api/broadcasting/auth'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $authToken',
+          },
+          body: jsonEncode({
+            'socket_id': socketId,
+            'channel_name': channelName,
+          }),
+        );
+        
+        return jsonDecode(response.body);
+      },
         onConnectionStateChange: (currentState, previousState) {
           print('Connection state changed: $currentState (previous: $previousState)');
         },
