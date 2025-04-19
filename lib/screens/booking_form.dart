@@ -169,37 +169,6 @@ class _BookingFormState extends State<BookingForm> {
 
     if (response.statusCode == 201) {
       _handleSuccessfulBooking(payload);
-      
-      // Get the homeowner name for the notification
-      final homeownerName = userProvider.user?['name'] ?? "A homeowner";
-      
-      // Prepare notification details
-      final notificationData = {
-        "title": "New Booking Received!",
-        "body": "$homeownerName has booked your services",
-        "type": "new_booking",
-        "booking_id": jsonDecode(response.body)['id'],
-        "homeowner_id": homeownerId,
-      };
-      
-      // Send notification to the selected provider
-      final providerId = selectedType == "Gardening" 
-          ? selectedGardenerId 
-          : selectedServiceProviderId;
-          
-      await http.post(
-        Uri.parse('https://devjeffrey.dreamhosters.com/api/send_notification'),
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": "Bearer ${userProvider.token}",
-        },
-        body: jsonEncode({
-          "user_id": providerId,
-          "user_type": selectedType == "Gardening" ? "gardener" : "service_provider",
-          "notification": notificationData,
-        }),
-      );
     } else {
       _showError("Booking failed: ${response.body}");
     }
