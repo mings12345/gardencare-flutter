@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gardencare_app/screens/notifications_screen.dart';
+import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
@@ -129,7 +129,7 @@ class GardenerDashboard extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                  MaterialPageRoute(builder: (context) =>  BookingNotificationsScreen()),
                 );
               },
             ),

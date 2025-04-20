@@ -104,7 +104,7 @@ class ChatScreenState extends State<ChatScreen> {
         },
       );
 
-      await _pusherService.initPusher(widget.userId.toString());
+      await _pusherService.initPusher(widget.currentUserId.toString());
       await _pusherService.fetchMessages( widget.currentUserId.toString(), 
       widget.otherUserId.toString(), );
     } catch (e) {

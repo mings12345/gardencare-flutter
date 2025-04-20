@@ -8,6 +8,8 @@ class PusherService {
   final PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   final String authToken;
   final Function(List<dynamic>) onMessagesFetched;
+  final Function(Map<String, dynamic>)? onBookingReceived; 
+  final Function(Map<String, dynamic>)? onBookingUpdated;
   final Function(String)? onError;
   // Define _channel field
   late PusherChannel _channel;
@@ -17,10 +19,14 @@ class PusherService {
     required this.authToken,
     required this.onMessagesFetched,
     this.onError,
+    this.onBookingReceived,
+     this.onBookingUpdated, 
     required String currentUserId,
   }) : _currentUserId = currentUserId;
   
   Future<void> initPusher(String userId) async {
+
+    print('Initializing Pusher with user ID: $userId');
     try {
 
     if (userId.isEmpty) {
@@ -30,28 +36,59 @@ class PusherService {
       await pusher.init(
         apiKey: '9b6cf6a0eecc032de3a0',
         cluster: 'ap1',
-              onAuthorizer: (String channelName, String socketId, dynamic options) async {
-        // Call your Laravel auth endpoint
-        final response = await http.post(
-          Uri.parse('$baseUrl/api/broadcasting/auth'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $authToken',
-          },
-          body: jsonEncode({
-            'socket_id': socketId,
-            'channel_name': channelName,
-          }),
-        );
-        
-        return jsonDecode(response.body);
+        onAuthorizer: (String channelName, String socketId, dynamic options) async {
+        print("Authorizing channel: $channelName, socket: $socketId");
+        try {
+          final response = await http.post(
+            Uri.parse('$baseUrl/api/broadcasting/auth'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $authToken',
+            },
+            body: jsonEncode({
+              'socket_id': socketId,
+              'channel_name': channelName,
+            }),
+          );
+          
+          // If we get a redirect, it's likely an auth issue
+    if (response.statusCode == 302) {
+      throw Exception("Authentication token expired or invalid");
+    }
+          print("Auth response: ${response.statusCode}, Body: ${response.body}");
+
+          if (response.statusCode != 200) {
+            throw Exception("Auth failed: ${response.statusCode}");
+          }
+
+          final jsonResponse = jsonDecode(response.body);
+          if (jsonResponse['auth'] == null) {
+            throw Exception("Missing 'auth' key in response");
+          }
+
+          return jsonResponse; // Must include 'auth' key
+        } catch (e) {
+          print("⚠️ Authorization error: $e");
+          rethrow;
+        }
       },
+       onSubscriptionError: (String message, dynamic e) {
+          print('Subscription error: $message, $e');
+        },
         onConnectionStateChange: (currentState, previousState) {
-          print('Connection state changed: $currentState (previous: $previousState)');
+          print('Pusher connection state: $previousState -> $currentState');
+        if (currentState == 'CONNECTED') {
+          print('Successfully connected to Pusher!');
+        } else if (currentState == 'FAILED') {
+          print('Connection failed - check credentials and network');
+        }
         },
         onError: (String message, int? code, dynamic e) {
           print('Pusher error: $message (code: $code, exception: $e)');
           onError?.call(message);
+        },
+        onEvent: (event) {
+          print('All Pusher events: ${event.eventName} - ${event.data}');
         },
       );
 
@@ -60,7 +97,7 @@ class PusherService {
 
     // Subscribe to private channel and bind events
         _channel = await pusher.subscribe(
-          channelName: 'user.$userId',
+          channelName: 'private-user.$userId',
           onEvent: (event) {
             // Handle all events
             _handleEvent(event);
@@ -68,7 +105,10 @@ class PusherService {
             // Specifically handle NewMessage events
             if (event.eventName == 'NewMessage') {
               _handleMessageEvent(event);
-            }
+            } else if (event.eventName == 'NewBooking' || event.eventName == 'BookingUpdated') {
+            _handleBookingEvent(event);
+          }
+         
           },
         );
 
@@ -108,6 +148,25 @@ class PusherService {
     }
       }
 
+       // New method to handle booking events
+  void _handleBookingEvent(PusherEvent event) {
+    print('Booking event received: ${event.eventName} - ${event.data}');
+    
+    try {
+      // Parse the event data
+      final Map<String, dynamic> bookingData = json.decode(event.data);
+      
+      // Notify using the callback
+      if (onBookingReceived != null) {
+        onBookingReceived!(bookingData);
+      }
+      
+    } catch (e) {
+      print('Error handling booking event: $e');
+      onError?.call('Failed to process booking event: ${e.toString()}');
+    }
+  }
+
    Future<List<dynamic>> fetchMessages(String senderId, String recipientId) async {
     try {
       final response = await http.get(
@@ -135,6 +194,56 @@ class PusherService {
     } catch (e) {
       print('Error fetching messages: $e');
       onError?.call('Failed to fetch messages: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+     // New method to fetch booking details
+  Future<Map<String, dynamic>> fetchBookingDetails(String bookingId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/bookings/$bookingId'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load booking details: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching booking details: $e');
+      onError?.call('Failed to fetch booking details: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+     // Method to update a booking status
+  Future<Map<String, dynamic>> updateBookingStatus(String bookingId, String status) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/bookings/$bookingId/status'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'status': status,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to update booking status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error updating booking status: $e');
+      onError?.call('Failed to update booking status: ${e.toString()}');
       rethrow;
     }
   }
@@ -168,7 +277,7 @@ class PusherService {
 Future<void> disconnect(String userId) async {
   try {
     // Store the channel name before unsubscribing if needed
-    final channelName = 'user.$userId'; // Use the same pattern you used in initPusher()
+    final channelName = 'private-user.$userId'; // Use the same pattern you used in initPusher()
     
     // No need to explicitly unbind in most cases - unsubscribing handles it
     await pusher.unsubscribe(channelName: channelName);

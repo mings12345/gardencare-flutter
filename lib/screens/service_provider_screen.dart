@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/screens/availability_screen.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
+import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
-import 'package:gardencare_app/screens/notifications_screen.dart';
 import 'package:gardencare_app/screens/service_provider_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/total_booking.dart';
@@ -130,7 +130,7 @@ class ServiceProviderScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                  MaterialPageRoute(builder: (context) =>  BookingNotificationsScreen()),
                 );
               },
             ),

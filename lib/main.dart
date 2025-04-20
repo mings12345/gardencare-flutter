@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
 import 'package:gardencare_app/screens/admin_dashboard_screen.dart';
+import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/gardener_dashboard.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
@@ -69,6 +70,7 @@ class MyApp extends StatelessWidget {
         '/gardening': (context) => GardeningScreen(),
         '/landscaping': (context) => LandscapingScreen(),
         '/bookings': (context) => BookingsScreen(),
+        '/booking_notifications': (context) => BookingNotificationsScreen(),
         '/booking-form': (context) => BookingForm(),
         '/home': (context) => HomeownerScreen(
               name: 'John Doe',

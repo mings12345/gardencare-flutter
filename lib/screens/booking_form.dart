@@ -30,11 +30,15 @@ class _BookingFormState extends State<BookingForm> {
   List<Map<String, dynamic>> services = [];
   List<Map<String, dynamic>> serviceProviders = [];
 
+  
+
   @override
   void initState() {
     super.initState();
     _loadData();
   }
+     // Initialize PusherService
+ 
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
@@ -125,7 +129,7 @@ class _BookingFormState extends State<BookingForm> {
     setState(() => totalPrice = sum);
   }
 
-  Future<void> submitBooking() async {
+  Future<void> submitBooking() async {  
   if (!_formKey.currentState!.validate()) return;
   _formKey.currentState!.save();
 
@@ -139,6 +143,8 @@ class _BookingFormState extends State<BookingForm> {
       _showError("Please login to book services");
       return;
     }
+   final formattedTime = 
+        "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
 
     final Map<String, dynamic> payload = {
       "type": selectedType,
@@ -146,7 +152,7 @@ class _BookingFormState extends State<BookingForm> {
       "service_ids": selectedServiceIds,
       "address": address,
       "date": selectedDate!.toIso8601String(),
-      "time": "${selectedTime!.hour}:${selectedTime!.minute}",
+      "time": formattedTime,
       "total_price": totalPrice,
       "special_instructions": specialInstructions ?? "",
     };
