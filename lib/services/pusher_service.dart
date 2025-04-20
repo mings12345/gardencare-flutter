@@ -198,6 +198,34 @@ class PusherService {
     }
   }
 
+    Future<List<dynamic>> fetchUserBookings(String userId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/get_pending_bookings/$userId'),
+      headers: {
+        'Authorization': 'Bearer $authToken',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonResponse = json.decode(response.body);
+      
+      if (jsonResponse.containsKey('bookings') && jsonResponse['bookings'] is List) {
+        return jsonResponse['bookings'];
+      } else {
+        throw Exception('Unexpected response structure: ${response.body}');
+      }
+    } else {
+      throw Exception('Failed to load bookings: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Error fetching user bookings: $e');
+    onError?.call('Failed to fetch bookings: ${e.toString()}');
+    rethrow;
+  }
+}
+
      // New method to fetch booking details
   Future<Map<String, dynamic>> fetchBookingDetails(String bookingId) async {
     try {

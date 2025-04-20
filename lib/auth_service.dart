@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/user.dart';
 
@@ -33,6 +35,15 @@ class AuthService {
         await prefs.setInt('userId', user.id);
         await prefs.setString('userRole', user.userType);
         print('Token saved: $token'); // Debugging line
+
+          // Update the UserProvider
+        Provider.of<UserProvider>(context, listen: false).setUserData(
+          token: token,
+          userData: responseData['user'], // Pass the entire user object
+          homeownerId: user.id,
+          role: user.userType,
+          userId: user.id.toString(),
+        );
 
         return user;
       } else if (response.headers['content-type']?.contains('application/json') == true) {

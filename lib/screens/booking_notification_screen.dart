@@ -64,6 +64,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
     
     try {
       await _pusherService.initPusher(userId);
+       await _fetchExistingBookings(userId);
       setState(() => _isLoading = false);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,6 +73,23 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
       setState(() => _isLoading = false);
     }
   }
+
+   Future<void> _fetchExistingBookings(String userId) async {
+    try {
+      // Replace with your actual API endpoint to fetch user's bookings
+      final existingBookings = await _pusherService.fetchUserBookings(userId);
+      
+      setState(() {
+        _bookingNotifications = existingBookings.cast<Map<String, dynamic>>();
+      });
+    } catch (e) {
+      print('Error fetching existing bookings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load existing bookings")),
+      );
+    }
+  }
+
 
   void _showBookingNotification(Map<String, dynamic> bookingData) {
     // Show a notification to the user

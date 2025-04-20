@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BookingForm extends StatefulWidget {
   @override
@@ -162,13 +163,15 @@ class _BookingFormState extends State<BookingForm> {
     } else if (selectedType == "Landscaping") {
       payload["serviceprovider_id"] = selectedServiceProviderId;
     }
+    final prefs = await SharedPreferences.getInstance();
     final baseUrl = dotenv.get('BASE_URL');
+    final token = prefs.getString('token') ?? '';
     final response = await http.post(
       Uri.parse('$baseUrl/api/create_booking'),
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": "Bearer ${userProvider.token}",
+        "Authorization": "Bearer ${token}",
       },
       body: jsonEncode(payload),
     );
