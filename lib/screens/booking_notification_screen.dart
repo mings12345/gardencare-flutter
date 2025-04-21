@@ -40,9 +40,12 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
       onMessagesFetched: (_) {}, // Not used here
       onBookingReceived: (bookingData) {
         print('New booking received: $bookingData');
-        setState(() {
+         setState(() {
+        // Check if booking already exists before adding
+        if (!_bookingNotifications.any((b) => b['id'] == bookingData['id'])) {
           _bookingNotifications.insert(0, bookingData);
-        });
+        }
+      });
         _showBookingNotification(bookingData);
       },
       onBookingUpdated: (updatedBooking) {
@@ -50,9 +53,13 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
         setState(() {
           final index = _bookingNotifications.indexWhere(
             (b) => b['id'] == updatedBooking['id']);
-          if (index != -1) {
+               if (index != -1) {
+          // Only update if something actually changed
+          if (_bookingNotifications[index]['status'] != updatedBooking['status'] ||
+              _bookingNotifications[index]['updated_at'] != updatedBooking['updated_at']) {
             _bookingNotifications[index] = updatedBooking;
           }
+         } 
         });
       },
       onError: (error) {
@@ -75,20 +82,39 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
   }
 
    Future<void> _fetchExistingBookings(String userId) async {
-    try {
-      // Replace with your actual API endpoint to fetch user's bookings
-      final existingBookings = await _pusherService.fetchUserBookings(userId);
-      
-      setState(() {
-        _bookingNotifications = existingBookings.cast<Map<String, dynamic>>();
-      });
-    } catch (e) {
-      print('Error fetching existing bookings: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load existing bookings")),
-      );
+  try {
+    print('Fetching bookings for user ID: $userId');
+    
+    // This is where you fetch the bookings
+    final existingBookings = await _pusherService.fetchUserBookings(userId);
+    
+    print('API returned bookings: $existingBookings');
+    print('Bookings type: ${existingBookings.runtimeType}');
+    
+    if (existingBookings.isEmpty) {
+      print('Returned bookings list is empty');
     }
+    
+    // Ensure each booking has all the required fields
+    for (var booking in existingBookings) {
+      print('Booking: $booking');
+      print('Booking contains id: ${booking.containsKey('id')}');
+      print('Booking contains status: ${booking.containsKey('status')}');
+      print('Booking contains type: ${booking.containsKey('type')}');
+      // Add other field checks as needed
+    }
+    
+    setState(() {
+      _bookingNotifications = existingBookings.cast<Map<String, dynamic>>();
+      print('Updated _bookingNotifications: $_bookingNotifications');
+    });
+  } catch (e) {
+    print('Error fetching existing bookings: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to load existing bookings: $e")),
+    );
   }
+}
 
 
   void _showBookingNotification(Map<String, dynamic> bookingData) {
@@ -153,51 +179,113 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
     );
   }
 
-  Future<void> _acceptBooking(Map<String, dynamic> booking) async {
-    try {
-      // Update the booking status via your booking service
-      await _pusherService.updateBookingStatus(booking['id'].toString(), 'accepted');
-      
-      // Update local state
-      setState(() {
-        final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
-        if (index != -1) {
-          _bookingNotifications[index]['status'] = 'accepted';
-        }
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking accepted")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to accept booking: $e")),
-      );
+      Future<void> _acceptBooking(Map<String, dynamic> booking) async {
+  try {
+    // Optimistic UI update
+    setState(() {
+      final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
+      if (index != -1) {
+        _bookingNotifications[index] = {
+          ..._bookingNotifications[index],
+          'status': 'accepted',
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+      }
+    });
+
+    // Send update to server and await the response
+    final Map<String, dynamic> response = await _pusherService.updateBookingStatus(
+      booking['id'].toString(), 
+      'accepted'
+    );
+
+    // Verify the response matches our update
+    if (response['status'] != 'accepted') {
+      throw Exception('Server did not confirm acceptance');
     }
+
+    // Update with server's response which might have additional fields
+    setState(() {
+      final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
+      if (index != -1) {
+        _bookingNotifications[index] = {
+          ..._bookingNotifications[index],
+          ...response, // Merge with server response
+        };
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Booking accepted")),
+    );
+  } catch (e) {
+    // Revert on failure
+    setState(() {
+      final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
+      if (index != -1) {
+        _bookingNotifications[index]['status'] = 'pending';
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to accept booking: $e")),
+    );
   }
+}
 
   Future<void> _declineBooking(Map<String, dynamic> booking) async {
-    try {
-      // Update the booking status via your booking service
-      await _pusherService.updateBookingStatus(booking['id'].toString(), 'declined');
-      
-      // Update local state
-      setState(() {
-        final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
-        if (index != -1) {
-          _bookingNotifications[index]['status'] = 'declined';
-        }
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking declined")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to decline booking: $e")),
-      );
+  try {
+    // Optimistic UI update
+    setState(() {
+      final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
+      if (index != -1) {
+        _bookingNotifications[index] = {
+          ..._bookingNotifications[index],
+          'status': 'declined',
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+      }
+    });
+
+    // Send update to server and await the response
+    final Map<String, dynamic> response = await _pusherService.updateBookingStatus(
+      booking['id'].toString(), 
+      'declined'
+    );
+
+    // Verify the response
+    if (response['status'] != 'declined') {
+      throw Exception('Server did not confirm decline');
     }
+
+    // Update with server's response
+    setState(() {
+      final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
+      if (index != -1) {
+        _bookingNotifications[index] = {
+          ..._bookingNotifications[index],
+          ...response, // Merge with server response
+        };
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Booking declined")),
+    );
+  } catch (e) {
+    // Revert on failure
+    setState(() {
+      final index = _bookingNotifications.indexWhere((b) => b['id'] == booking['id']);
+      if (index != -1) {
+        _bookingNotifications[index]['status'] = 'pending';
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to decline booking: $e")),
+    );
   }
+}
 }
 
 class BookingNotificationCard extends StatelessWidget {
@@ -212,56 +300,52 @@ class BookingNotificationCard extends StatelessWidget {
     required this.onDecline,
   }) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    final bool isPending = booking['status'] == 'pending';
-
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Booking #${booking['id']}",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                _buildStatusChip(booking['status']),
-              ],
-            ),
-            SizedBox(height: 8),
-            Text("Service: ${booking['type']}"),
-            Text("Date: ${booking['date']}"),
-            Text("Time: ${booking['time']}"),
-            Text("Address: ${booking['address']}"),
-            Text("Total: ₱${booking['total_price']}"),
-            SizedBox(height: 8),
-            if (isPending)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: onDecline,
-                    child: Text("Decline"),
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: onAccept,
-                    child: Text("Accept"),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  ),
-                ],
+ @override
+Widget build(BuildContext context) {
+  final status = booking['status']?.toString().toLowerCase() ?? 'pending';
+  return Card(
+    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    child: Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Booking #${booking['id']}",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-          ],
-        ),
+              _buildStatusChip(status),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text("Service: ${booking['type'] ?? 'Not specified'}"),
+          Text("Date: ${booking['date'] ?? 'Not specified'}"),
+          Text("Time: ${booking['time'] ?? 'Not specified'}"),
+          Text("Address: ${booking['address'] ?? 'Not specified'}"),
+          Text("Total: ₱${booking['total_price']?.toString() ?? '0.00'}"),
+          SizedBox(height: 8),
+          
+          // Only keep one condition for showing buttons
+          if (status == 'pending')
+            _buildActionButtons()
+          else if (status == 'accepted')
+            Text(
+              "Accepted on ${_formatDate(booking['updated_at'])}",
+              style: TextStyle(color: Colors.green),
+            )
+          else if (status == 'declined')
+            Text(
+              "Declined on ${_formatDate(booking['updated_at'])}",
+              style: TextStyle(color: Colors.red),
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatusChip(String status) {
     Color color;
@@ -288,4 +372,33 @@ class BookingNotificationCard extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 8),
     );
   }
+
+  Widget _buildActionButtons() {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.end,
+    children: [
+      TextButton(
+        onPressed: onDecline,
+        child: Text("Decline"),
+        style: TextButton.styleFrom(foregroundColor: Colors.red),
+      ),
+      SizedBox(width: 8),
+      ElevatedButton(
+        onPressed: onAccept,
+        child: Text("Accept"),
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+      ),
+    ],
+  );
+}
+
+String _formatDate(String? dateString) {
+  if (dateString == null) return 'unknown time';
+  try {
+    final date = DateTime.parse(dateString);
+    return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  } catch (e) {
+    return 'unknown time';
+  }
+}
 }

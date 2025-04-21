@@ -103,11 +103,19 @@ class PusherService {
             _handleEvent(event);
             print(event);
             // Specifically handle NewMessage events
-            if (event.eventName == 'NewMessage') {
-              _handleMessageEvent(event);
-            } else if (event.eventName == 'NewBooking' || event.eventName == 'BookingUpdated') {
-            _handleBookingEvent(event);
-          }
+             switch (event.eventName) {
+      case 'NewMessage':
+        _handleMessageEvent(event);
+        break;
+      case 'NewBooking':
+        _handleBookingEvent(event);
+        break;
+      case 'BookingUpdated':
+        _handleBookingUpdateEvent(event);
+        break;
+      default:
+        print('Unhandled event type: ${event.eventName}');
+    }
          
           },
         );
@@ -124,6 +132,19 @@ class PusherService {
     print('Event received: ${event.eventName} - ${event.data}');
   }
 
+  void _handleBookingUpdateEvent(PusherEvent event) {
+  try {
+    final updatedBooking = json.decode(event.data);
+    print('Booking update received: $updatedBooking');
+    
+    if (onBookingUpdated != null) {
+      onBookingUpdated!(updatedBooking);
+    }
+  } catch (e) {
+    print('Error handling booking update: $e');
+    onError?.call('Failed to process booking update: ${e.toString()}');
+  }
+}
       void _handleMessageEvent(PusherEvent event) {
         print('New message event: ${event.data}');
         
