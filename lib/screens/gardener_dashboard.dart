@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/gardener_profile.dart';
+import 'package:gardencare_app/services/booking_service.dart';
 import 'calendar_screen.dart';
 import 'chat_list_screen.dart';
 import 'total_booking.dart';
 import 'total_service_screen.dart';
-import 'total_earnings.dart'; // Import the new screen
+import 'total_earnings.dart';
 
-class GardenerDashboard extends StatelessWidget {
+class GardenerDashboard extends StatefulWidget { 
   final String name;
   final String role;
   final String email;
@@ -26,6 +29,54 @@ class GardenerDashboard extends StatelessWidget {
   });
 
   @override
+  _GardenerDashboardState createState() => _GardenerDashboardState();
+}
+
+class _GardenerDashboardState extends State<GardenerDashboard> {
+  int bookingCount = 0;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookingCount();
+  }
+
+  Future<void> _fetchBookingCount() async {
+    try {
+      final bookingService = BookingService();
+      final count = await bookingService.fetchBookingCount();
+      
+      setState(() {
+        bookingCount = count;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error fetching booking count: $e');
+      // Optionally show error to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load booking count')),
+      );
+    }
+  }
+
+  Widget _buildLoadingCard() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 17, 101, 90),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +87,7 @@ class GardenerDashboard extends StatelessWidget {
         child: ListView(
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
@@ -46,16 +97,16 @@ class GardenerDashboard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 30,
                     backgroundImage: AssetImage('assets/images/anne.jpg'),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Text(
-                    name, // Use the name property here
+                    widget.name, // Changed to widget.name
                     style: const TextStyle(color: Colors.white, fontSize: 24),
                   ),
-                  Text(
+                  const Text(
                     'Gardener',
                     style: TextStyle(color: Colors.white70),
                   ),
@@ -75,11 +126,11 @@ class GardenerDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => GardenerProfile(
-                      name: name,
-                      role: role,
-                      email: email,
-                      phone: phone,
-                      address: address,
+                      name: widget.name, // Changed to widget.name
+                      role: widget.role,
+                      email: widget.email,
+                      phone: widget.phone,
+                      address: widget.address,
                     ),
                   ),
                 );
@@ -103,11 +154,11 @@ class GardenerDashboard extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context); // Close the drawer
                 Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChatListScreen(),
-              ),
-            );
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatListScreen(),
+                  ),
+                );
               },
             ),
             ListTile(
@@ -129,7 +180,7 @@ class GardenerDashboard extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  BookingNotificationsScreen()),
+                  MaterialPageRoute(builder: (context) => BookingNotificationsScreen()),
                 );
               },
             ),
@@ -200,12 +251,21 @@ class GardenerDashboard extends StatelessWidget {
               children: [
                 GestureDetector(
                   onTap: () {
+                    final user = Provider.of<UserProvider>(context, listen: false);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => TotalBookingScreen(userRole: 'gardener')),
+                      MaterialPageRoute(
+                        builder: (context) => TotalBookingScreen(
+                          userId: user.userId!, // Add ! to force non-nullable
+                          userRole: user.role!,
+                          authToken: user.token!,
+                        ),
+                      ),
                     );
                   },
-                  child: _buildDashboardCard('251', 'Total Booking', Icons.calendar_today),
+                  child: isLoading
+                      ? _buildLoadingCard()
+                      : _buildDashboardCard(bookingCount.toString(), 'Total Booking', Icons.calendar_today),
                 ),
                 GestureDetector(
                   onTap: () {

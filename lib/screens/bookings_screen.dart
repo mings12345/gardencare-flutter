@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/services/booking_service.dart';
+import 'package:gardencare_app/services/pusher_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BookingsScreen extends StatefulWidget {
   @override
@@ -8,6 +10,7 @@ class BookingsScreen extends StatefulWidget {
 }
 
 class _BookingsScreenState extends State<BookingsScreen> {
+    late PusherService _pusherService;
   final BookingService _bookingService = BookingService();
   List<Map<String, dynamic>> _bookings = [];
   bool _isLoading = true;
@@ -16,10 +19,74 @@ class _BookingsScreenState extends State<BookingsScreen> {
   @override
   void initState() {
     super.initState();
+      _initializePusher();
     _fetchHomeownerBookings();
   }
     
+     void _initializePusher() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final userId = prefs.getInt('userId')?.toString() ?? '';
     
+    if (userId.isEmpty) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("User ID not found")),
+      );
+      return;
+    }
+
+     _pusherService = PusherService(
+      authToken: token,
+      currentUserId: userId,
+      onMessagesFetched: (_) {}, 
+      onBookingReceived: (_) {
+        // Refresh bookings when a new one is received
+        _fetchHomeownerBookings();
+      },
+      onBookingUpdated: (updatedBooking) {
+        print('Booking updated event received in BookingsScreen!');
+        print('Updated booking data: $updatedBooking');
+        // Update the specific booking in our list
+        setState(() {
+          final index = _bookings.indexWhere((b) => b['id'] == updatedBooking['id']);
+          if (index != -1) {
+            _bookings[index] = updatedBooking;
+          } else {
+            // If not found, refresh all bookings
+            _fetchHomeownerBookings();
+          }
+        });
+      },
+      onError: (error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Pusher Error: $error")),
+        );
+      },
+    );
+    
+    try {
+      await _pusherService.initPusher(userId);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to initialize notifications: $e")),
+      );
+    }
+  }
+
+
+  @override
+  void dispose() {
+    // Make sure to disconnect Pusher when leaving the screen
+    final prefs = SharedPreferences.getInstance();
+    prefs.then((value) {
+      final userId = value.getInt('userId').toString();
+      if (userId.isNotEmpty) {
+        _pusherService.disconnect(userId);
+      }
+    });
+    super.dispose();
+  }
 
   Future<void> _fetchHomeownerBookings() async {
     try {
@@ -70,12 +137,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         itemBuilder: (context, index) {
                           final booking = _bookings[index];
                           // Extract service type from services relationship if available
-                          String serviceType = "Garden Service";
-                          if (booking['services'] != null && booking['services'].isNotEmpty) {
-                            serviceType = booking['services'][0]['name'];
-                          } else if (booking['type'] != null) {
-                            serviceType = booking['type'];
-                          }
+                                        String getServiceTypes(Map<String, dynamic> booking) {
+                    if (booking['services'] != null && booking['services'].isNotEmpty) {
+                      return (booking['services'] as List).map((s) => s['name'].toString()).join(', ');
+                    } else if (booking['type'] != null) {
+                      return booking['type'].toString();
+                    }
+                    return "Garden Service";
+                  }
                           
                           return Card(
                             margin: EdgeInsets.all(10),
@@ -86,12 +155,12 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "Service Type: $serviceType",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  "Service Type: ${getServiceTypes(booking)}",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
+                                ),
                                   SizedBox(height: 5),
                                   if (booking['gardener'] != null)
                                     Text("Gardener: ${booking['gardener']['name']}"),

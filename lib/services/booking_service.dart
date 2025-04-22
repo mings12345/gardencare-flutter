@@ -34,4 +34,35 @@ class BookingService {
       rethrow;
     }
   }
+
+  // Add this new method to fetch booking count
+  Future<int> fetchBookingCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final userId = prefs.getInt('userId');
+    
+    if (token == null || userId == null) {
+      throw Exception('No token or user ID found. Please log in again.');
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/bookings/count/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['count'] ?? 0;
+      } else {
+        throw Exception('Failed to load booking count: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching booking count: $e');
+      return 0; // Return 0 if there's an error
+    }
+  }
 }

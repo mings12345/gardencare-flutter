@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/availability_screen.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
@@ -6,12 +7,14 @@ import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/service_provider_profile.dart';
+import 'package:gardencare_app/services/booking_service.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/total_booking.dart';
 import 'package:gardencare_app/screens/total_service_screen.dart';
 import 'package:gardencare_app/screens/total_earnings.dart';
 
-class ServiceProviderScreen extends StatelessWidget {
+class ServiceProviderScreen extends StatefulWidget {
   final String name;
   final String role;
   final String email;
@@ -26,6 +29,41 @@ class ServiceProviderScreen extends StatelessWidget {
     required this.address,
   });
 
+    @override
+  _ServiceProviderScreenState createState() => _ServiceProviderScreenState();
+}
+
+class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
+  int bookingCount = 0;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookingCount();
+  }
+
+      Future<void> _fetchBookingCount() async {
+    try {
+      final bookingService = BookingService();
+      final count = await bookingService.fetchBookingCount();
+      
+      setState(() {
+        bookingCount = count;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error fetching booking count: $e');
+      // Optionally show error to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load booking count')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,7 +75,7 @@ class ServiceProviderScreen extends StatelessWidget {
         child: ListView(
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
@@ -47,16 +85,16 @@ class ServiceProviderScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 30,
                     backgroundImage: AssetImage('assets/images/provider.jpg'),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Text(
-                    name,
+                    widget.name,  // Changed from 'name' to 'widget.name'
                     style: const TextStyle(color: Colors.white, fontSize: 24),
                   ),
-                  Text(
+                  const Text(
                     'Service Provider',
                     style: TextStyle(color: Colors.white70),
                   ),
@@ -72,19 +110,19 @@ class ServiceProviderScreen extends StatelessWidget {
               leading: const Icon(Icons.account_circle),
               title: const Text('My Profile'),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ServiceProviderProfile(
-                      name: name,
-                      role: role,
-                      email: email,
-                      phone: phone,
-                      address: address,
-                    ),
-                  ),
-                );
-              },
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ServiceProviderProfile(
+                  name: widget.name,    
+                  role: widget.role,   
+                  email: widget.email, 
+                  phone: widget.phone,  
+                  address: widget.address, 
+                ),
+              ),
+            );
+          },
             ),
             ListTile(
               leading: const Icon(Icons.book),
@@ -212,12 +250,21 @@ class ServiceProviderScreen extends StatelessWidget {
               children: [
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => TotalBookingScreen(userRole: 'service_provider')),
-                    );
+                    final user = Provider.of<UserProvider>(context, listen: false);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TotalBookingScreen(
+                       userId: user.userId!, // Add ! to force non-nullable
+                       userRole: user.role!,
+                       authToken: user.token!,  // Pass the required authToken
+                    ),
+                  ),
+                );
                   },
-                  child: _buildDashboardCard('251', 'Total Booking', Icons.calendar_today),
+                   child: isLoading
+                      ? _buildLoadingCard()
+                      : _buildDashboardCard(bookingCount.toString(), 'Total Booking', Icons.calendar_today),
                 ),
                 GestureDetector(
                   onTap: () {
@@ -242,6 +289,19 @@ class ServiceProviderScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+     Widget _buildLoadingCard() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 17, 101, 90),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: Colors.white),
       ),
     );
   }

@@ -286,6 +286,8 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
     );
   }
 }
+
+ 
 }
 
 class BookingNotificationCard extends StatelessWidget {
@@ -300,52 +302,60 @@ class BookingNotificationCard extends StatelessWidget {
     required this.onDecline,
   }) : super(key: key);
 
- @override
-Widget build(BuildContext context) {
-  final status = booking['status']?.toString().toLowerCase() ?? 'pending';
-  return Card(
-    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Booking #${booking['id']}",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              _buildStatusChip(status),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text("Service: ${booking['type'] ?? 'Not specified'}"),
-          Text("Date: ${booking['date'] ?? 'Not specified'}"),
-          Text("Time: ${booking['time'] ?? 'Not specified'}"),
-          Text("Address: ${booking['address'] ?? 'Not specified'}"),
-          Text("Total: ₱${booking['total_price']?.toString() ?? '0.00'}"),
-          SizedBox(height: 8),
-          
-          // Only keep one condition for showing buttons
-          if (status == 'pending')
-            _buildActionButtons()
-          else if (status == 'accepted')
-            Text(
-              "Accepted on ${_formatDate(booking['updated_at'])}",
-              style: TextStyle(color: Colors.green),
-            )
-          else if (status == 'declined')
-            Text(
-              "Declined on ${_formatDate(booking['updated_at'])}",
-              style: TextStyle(color: Colors.red),
+   String getServiceTypes(Map<String, dynamic> booking) {
+    if (booking['services'] != null && booking['services'].isNotEmpty) {
+      return (booking['services'] as List).map((s) => s['name'].toString()).join(', ');
+    } else if (booking['type'] != null) {
+      return booking['type'].toString();
+    }
+    return "Garden Service";
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final status = booking['status']?.toString().toLowerCase() ?? 'pending';
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Booking #${booking['id']}",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                _buildStatusChip(status),
+              ],
             ),
-        ],
+            SizedBox(height: 8),
+            Text("Service: ${getServiceTypes(booking)}"),
+            Text("Date: ${booking['date'] ?? 'Not specified'}"),
+            Text("Time: ${booking['time'] ?? 'Not specified'}"),
+            Text("Address: ${booking['address'] ?? 'Not specified'}"),
+            Text("Total: ₱${booking['total_price']?.toString() ?? '0.00'}"),
+            SizedBox(height: 8),
+            
+            if (status == 'pending')
+              _buildActionButtons()
+            else if (status == 'accepted')
+              Text(
+                "Accepted on ${_formatDate(booking['updated_at'])}",
+                style: TextStyle(color: Colors.green),
+              )
+            else if (status == 'declined')
+              Text(
+                "Declined on ${_formatDate(booking['updated_at'])}",
+                style: TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildStatusChip(String status) {
     Color color;
@@ -374,31 +384,31 @@ Widget build(BuildContext context) {
   }
 
   Widget _buildActionButtons() {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.end,
-    children: [
-      TextButton(
-        onPressed: onDecline,
-        child: Text("Decline"),
-        style: TextButton.styleFrom(foregroundColor: Colors.red),
-      ),
-      SizedBox(width: 8),
-      ElevatedButton(
-        onPressed: onAccept,
-        child: Text("Accept"),
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-      ),
-    ],
-  );
-}
-
-String _formatDate(String? dateString) {
-  if (dateString == null) return 'unknown time';
-  try {
-    final date = DateTime.parse(dateString);
-    return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  } catch (e) {
-    return 'unknown time';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: onDecline,
+          child: Text("Decline"),
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
+        ),
+        SizedBox(width: 8),
+        ElevatedButton(
+          onPressed: onAccept,
+          child: Text("Accept"),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+        ),
+      ],
+    );
   }
-}
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'unknown time';
+    try {
+      final date = DateTime.parse(dateString).toLocal();
+      return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'unknown time';
+    }
+  }
 }
