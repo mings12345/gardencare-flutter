@@ -65,4 +65,23 @@ class BookingService {
       return 0; // Return 0 if there's an error
     }
   }
+
+  Future<Map<String, dynamic>> processPayment(
+      Map<String, dynamic> paymentData, String token) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/process-payment'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(paymentData),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to process payment: ${response.body}');
+    }
+  }
 }

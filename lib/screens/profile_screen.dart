@@ -5,7 +5,6 @@ import 'package:gardencare_app/screens/edit_profile_screen.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ProfileScreen extends StatefulWidget {
@@ -13,6 +12,7 @@ class ProfileScreen extends StatefulWidget {
   final String email;
   final String address;
   final String phone;
+  final String gcashNo;
 
   const ProfileScreen({
     Key? key,
@@ -20,6 +20,7 @@ class ProfileScreen extends StatefulWidget {
     required this.email,
     required this.address,
     required this.phone,
+    required this.gcashNo,
   }) : super(key: key);
 
   @override
@@ -31,7 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late String email;
   late String address;
   late String phone;
-  File? _image; // To store the selected imagezy
+  late String gcashNo;
 
   @override
   void initState() {
@@ -39,6 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     name = widget.name;
     email = widget.email;
     address = widget.address;
+    gcashNo = widget.gcashNo;
     phone = widget.phone;
   }
 
@@ -51,7 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           email: email,
           address: address,
           phone: phone,
-          image: _image, // Pass the current image to the edit screen
+          gcashNo: gcashNo,
         ),
       ),
     );
@@ -62,7 +64,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         email = updatedProfile['email'];
         address = updatedProfile['address'];
         phone = updatedProfile['phone'];
-        _image = updatedProfile['image']; // Update the image
       });
     }
   }
@@ -146,7 +147,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   email: email,
                   address: address,
                   phone: phone,
-                  image: _image)), // Pass _image to _TopPortion
+                  gcashNo: gcashNo,
+                  )), 
           Expanded(
             flex: 5,
             child: SingleChildScrollView(
@@ -316,7 +318,7 @@ class _TopPortion extends StatelessWidget {
   final String email;
   final String address;
   final String phone;
-  final File? image;
+  final String gcashNo;
 
   const _TopPortion({
     Key? key,
@@ -324,7 +326,7 @@ class _TopPortion extends StatelessWidget {
     required this.email,
     required this.address,
     required this.phone,
-    this.image,
+    required this.gcashNo,
   }) : super(key: key);
 
   @override
@@ -362,6 +364,7 @@ class _TopPortion extends StatelessWidget {
                                 name: name,
                                 email: email,
                                 address: address,
+                                gcashNo: gcashNo,
                                 phone: phone,
                               )),
                     );
@@ -386,12 +389,7 @@ class _TopPortion extends StatelessWidget {
             child: SizedBox(
               width: 135,
               height: 130,
-              child: CircleAvatar(
-                backgroundImage: image != null
-                    ? FileImage(image!) // Display the selected image
-                    : const AssetImage('assets/images/violet.jpg')
-                        as ImageProvider, // Default image
-              ),
+              
             ),
           ),
         ),

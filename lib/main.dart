@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
-import 'package:gardencare_app/screens/admin_dashboard_screen.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/gardener_dashboard.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:gardencare_app/screens/onboarding_screen.dart';
+import 'package:gardencare_app/screens/payment_screen.dart';
 import 'package:gardencare_app/screens/profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/screens/service_provider_screen.dart';
@@ -44,7 +44,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(primarySwatch: Colors.blue),
       initialRoute: '/',
       routes: {
-        '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/onboarding-screen': (context) => const OnboardingScreen(),
         '/': (context) => LoginScreen(),
         '/profile': (context) => const ProfileScreen(
@@ -52,6 +51,7 @@ class MyApp extends StatelessWidget {
               email: 'john.doe@example.com',
               address: '123 Garden St, Green City',
               phone: '123-456-7890',
+              gcashNo: '1234567890',
             ),
         '/service-provider-screen': (context) => ServiceProviderScreen(
               name: 'John Doe',
@@ -72,11 +72,20 @@ class MyApp extends StatelessWidget {
         '/bookings': (context) => BookingsScreen(),
         '/booking_notifications': (context) => BookingNotificationsScreen(),
         '/booking-form': (context) => BookingForm(),
+        '/payment': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return PaymentScreen(
+            bookingId: args['booking_id'],
+            amount: args['amount'] is double ? args['amount'] : double.parse(args['amount'].toString()),
+            userId: args['user_id'],
+          );
+        },
         '/home': (context) => HomeownerScreen(
               name: 'John Doe',
               email: 'john.doe@example.com',
               address: '123 Garden St, Green City',
               phone: '123-456-7890',
+              gcashNo: '1234567890',
             ),
         '/message': (context) => ChatListScreen()
       }

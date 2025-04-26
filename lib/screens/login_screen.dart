@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
-import 'package:gardencare_app/screens/admin_dashboard_screen.dart';
 import 'package:provider/provider.dart';
 import '../auth_service.dart';
 import 'gardener_dashboard.dart';
@@ -59,11 +58,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
           final profileData = await _authService.fetchProfileData(user.id.toString());
 
+
           // Check for null values in profileData
           final name = profileData['name'] ?? '';
           final email = profileData['email'] ?? '';
           final phone = profileData['phone'] ?? '';
           final address = profileData['address'] ?? '';
+          final gcashNo = profileData['gcash_no'] ?? '';
+          
+          userProvider.updateGcashNo(gcashNo);
 
           // Redirect based on user type
           switch (user.userType) {
@@ -75,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   email: email,
                   phone: phone,
                   address: address,
+                  gcashNo: gcashNo,
                 )),
               );
               break;
@@ -100,12 +104,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   phone: phone,
                   address: address,
                 )),
-              );
-              break;
-            case 'admin': // Add case for admin
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
               );
               break;
             default:
