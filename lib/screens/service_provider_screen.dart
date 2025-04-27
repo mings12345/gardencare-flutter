@@ -6,7 +6,7 @@ import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
-import 'package:gardencare_app/screens/service_provider_profile.dart';
+import 'package:gardencare_app/screens/provider_profile_screen.dart';
 import 'package:gardencare_app/services/booking_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +20,7 @@ class ServiceProviderScreen extends StatefulWidget {
   final String email;
   final String phone;
   final String address;
+  final String gcashNo;
 
   ServiceProviderScreen({
     required this.name,
@@ -27,6 +28,7 @@ class ServiceProviderScreen extends StatefulWidget {
     required this.email,
     required this.phone,
     required this.address,
+    required this.gcashNo,
   });
 
     @override
@@ -113,12 +115,12 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ServiceProviderProfile(
+                builder: (context) => ProviderProfileScreen(
                   name: widget.name,    
-                  role: widget.role,   
                   email: widget.email, 
                   phone: widget.phone,  
                   address: widget.address, 
+                   gcashNo: widget.gcashNo,
                 ),
               ),
             );
@@ -244,9 +246,10 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
             GridView.count(
               shrinkWrap: true,
               crossAxisCount: 2,
-              crossAxisSpacing: 16,
+              crossAxisSpacing: 10,
               mainAxisSpacing: 16,
               physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 1.1, 
               children: [
                 GestureDetector(
                   onTap: () {
@@ -328,7 +331,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: 20),
+              Icon(icon, color: Colors.white, size: 17),
               const SizedBox(width: 8),
               Text(
                 title,

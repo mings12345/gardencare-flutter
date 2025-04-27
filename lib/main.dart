@@ -6,7 +6,6 @@ import 'package:gardencare_app/screens/gardener_dashboard.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:gardencare_app/screens/onboarding_screen.dart';
-import 'package:gardencare_app/screens/payment_screen.dart';
 import 'package:gardencare_app/screens/profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/screens/service_provider_screen.dart';
@@ -54,6 +53,7 @@ class MyApp extends StatelessWidget {
               gcashNo: '1234567890',
             ),
         '/service-provider-screen': (context) => ServiceProviderScreen(
+              gcashNo: '1234567890',
               name: 'John Doe',
               role: 'Service Provider',
               email: 'john.doe@example.com',
@@ -63,6 +63,7 @@ class MyApp extends StatelessWidget {
         '/gardener-dashboard': (context) => GardenerDashboard(
               name: 'John Doe',
               role: 'Gardener',
+              gcashNo: '1234567890',
               email: 'john.doe@example.com',
               phone: '123-456-7890',
               address: '123 Garden St, Green City',
@@ -72,14 +73,6 @@ class MyApp extends StatelessWidget {
         '/bookings': (context) => BookingsScreen(),
         '/booking_notifications': (context) => BookingNotificationsScreen(),
         '/booking-form': (context) => BookingForm(),
-        '/payment': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-          return PaymentScreen(
-            bookingId: args['booking_id'],
-            amount: args['amount'] is double ? args['amount'] : double.parse(args['amount'].toString()),
-            userId: args['user_id'],
-          );
-        },
         '/home': (context) => HomeownerScreen(
               name: 'John Doe',
               email: 'john.doe@example.com',

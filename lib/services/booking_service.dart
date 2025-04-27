@@ -35,6 +35,42 @@ class BookingService {
     }
   }
 
+  Future<void> submitRating({
+  required int bookingId,
+  required double rating,
+  String? feedback,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token') ?? '';
+  
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/bookings/$bookingId/rate'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'rating': rating,
+        'feedback': feedback,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return;
+    } else if (response.statusCode == 422) {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['message'] ?? 'Rating already exists for this booking');
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['message'] ?? 'Failed to submit rating: Status ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Error submitting rating: $e');
+    rethrow;
+  }
+}
   // Add this new method to fetch booking count
   Future<int> fetchBookingCount() async {
     final prefs = await SharedPreferences.getInstance();

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
-import 'package:gardencare_app/screens/gardener_profile.dart';
+import 'package:gardencare_app/screens/gardener_profile_screen.dart';
 import 'package:gardencare_app/services/booking_service.dart';
 import 'calendar_screen.dart';
 import 'chat_list_screen.dart';
@@ -19,6 +19,7 @@ class GardenerDashboard extends StatefulWidget {
   final String email;
   final String phone;
   final String address;
+  final String gcashNo;
 
   GardenerDashboard({
     required this.name,
@@ -26,6 +27,7 @@ class GardenerDashboard extends StatefulWidget {
     required this.email,
     required this.phone,
     required this.address,
+    required this.gcashNo,
   });
 
   @override
@@ -125,11 +127,11 @@ class _GardenerDashboardState extends State<GardenerDashboard> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => GardenerProfile(
+                    builder: (context) => GardenerProfileScreen(
                       name: widget.name, // Changed to widget.name
-                      role: widget.role,
                       email: widget.email,
                       phone: widget.phone,
+                      gcashNo: widget.gcashNo,
                       address: widget.address,
                     ),
                   ),

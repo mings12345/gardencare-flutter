@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/auth_service.dart';
-import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/edit_profile_screen.dart';
-import 'package:gardencare_app/screens/homeowner_screen.dart';
-import 'package:gardencare_app/screens/calendar_screen.dart';
+import 'package:gardencare_app/screens/gardener_dashboard.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:http/http.dart' as http;
 
-class ProfileScreen extends StatefulWidget {
+class GardenerProfileScreen extends StatefulWidget {
   final String name;
   final String email;
   final String address;
   final String phone;
   final String gcashNo;
 
-  const ProfileScreen({
+  const GardenerProfileScreen({
     Key? key,
     required this.name,
     required this.email,
@@ -25,10 +23,10 @@ class ProfileScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<GardenerProfileScreen> createState() => _GardenerProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _GardenerProfileScreenState extends State<GardenerProfileScreen> {
   late String name;
   late String email;
   late String address;
@@ -69,73 +67,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _viewBookingHistory() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => const BookingHistoryScreen(userRole: 'homeowner')),
-    );
-  }
-
-  void _openCalendar() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => const CalendarScreen(
-              userRole: 'homeowner', loggedInUser: '')),
-    );
-  }
-
-  // New method to handle logout
   void _logout() async {
-  final token = await AuthService.getToken();
-  print("Retrieved Token: $token"); // Debugging: Print the token
-
-  if (token == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("No token found. Please log in again."),
-        duration: Duration(seconds: 2),
-      ),
-    );
-    return;
-  }
-
-  try {
-      final String baseUrl = dotenv.get('BASE_URL'); 
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/logout'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
-    print("Response Body: ${response.body}"); // Debugging: Print response body
-
-    if (response.statusCode == 200) {
-      await AuthService.clearToken();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
+    final token = await AuthService.getToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No token found. Please log in again."),
+          duration: Duration(seconds: 2),
+        ),
       );
-    } else {
+      return;
+    }
+
+    try {
+      final String baseUrl = dotenv.get('BASE_URL'); 
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/logout'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        await AuthService.clearToken();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+          content: Text("Error: $e"),
           duration: const Duration(seconds: 2),
         ),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error: $e"),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -143,14 +118,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Column(
         children: [
           Expanded(
-              flex: 2,
-              child: _TopPortion(
-                  name: name,
-                  email: email,
-                  address: address,
-                  phone: phone,
-                  gcashNo: gcashNo,
-                  )), 
+            flex: 2,
+            child: _TopPortion(
+              name: name,
+              email: email,
+              address: address,
+              phone: phone,
+              gcashNo: gcashNo,
+            ),
+          ),
           Expanded(
             flex: 5,
             child: SingleChildScrollView(
@@ -158,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   Text(
-                    name.split(" ")[0], // Display first name only
+                    name.split(" ")[0],
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
@@ -175,88 +151,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                    ElevatedButton(
-                      onPressed: _editProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      ElevatedButton(
+                        onPressed: _editProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          "Edit Profile",
+                          style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                       ),
-                      child: const Text(
-                        "Edit Profile",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: _logout,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      ElevatedButton(
+                        onPressed: _logout,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          "Logout",
+                          style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                       ),
-                      child: const Text(
-                        "Logout",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                    ),
                     ],
-                  ),
-                  const SizedBox(height: 30),
-                  _buildActionCard(
-                    context,
-                    icon: Icons.history,
-                    label: 'View Booking History',
-                    onTap: _viewBookingHistory,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildActionCard(
-                    context,
-                    icon: Icons.calendar_today,
-                    label: 'Calendar',
-                    onTap: _openCalendar,
                   ),
                 ],
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionCard(BuildContext context,
-      {required IconData icon,
-      required String label,
-      required VoidCallback onTap}) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.green, size: 25),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const Icon(Icons.arrow_forward, color: Colors.grey),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -362,13 +293,15 @@ class _TopPortion extends StatelessWidget {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => HomeownerScreen(
-                                name: name,
-                                email: email,
-                                address: address,
-                                gcashNo: gcashNo,
-                                phone: phone,
-                              )),
+                        builder: (context) => GardenerDashboard(
+                          name: name,
+                          email: email,
+                          address: address,
+                          role: "Gardener",
+                          phone: phone,
+                          gcashNo: gcashNo,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -391,7 +324,6 @@ class _TopPortion extends StatelessWidget {
             child: SizedBox(
               width: 135,
               height: 130,
-              
             ),
           ),
         ),

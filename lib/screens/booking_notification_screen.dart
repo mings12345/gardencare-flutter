@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -36,7 +37,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
     
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final userId = prefs.getInt('userId').toString() ?? '';
+    final userId = prefs.getInt('userId')?.toString() ?? '';
     // Get the user ID from the provider (should match Laravel's user ID)
     if (userId.isEmpty) {
       setState(() => _isLoading = false);
@@ -92,7 +93,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
       setState(() => _isLoading = false);
     }
   }
-
+    
    Future<void> _fetchExistingBookings(String userId) async {
   try {
     print('Fetching bookings for user ID: $userId');
@@ -649,13 +650,37 @@ class BookingNotificationCard extends StatelessWidget {
     required this.onDecline,
   }) : super(key: key);
 
-   String getServiceTypes(Map<String, dynamic> booking) {
-    if (booking['services'] != null && booking['services'].isNotEmpty) {
-      return (booking['services'] as List).map((s) => s['name'].toString()).join(', ');
-    } else if (booking['type'] != null) {
-      return booking['type'].toString();
+   String getServiceType(Map<String, dynamic> booking) {
+    // First check if there's an explicit type
+    if (booking['type'] != null) {
+      String type = booking['type'].toString().toLowerCase();
+      if (type.contains('garden')) {
+        return 'Gardening';
+      } else if (type.contains('landscape')) {
+        return 'Landscaping';
+      }
+      return type;
     }
+    
+    // If no explicit type, infer from services
+    if (booking['services'] != null && booking['services'].isNotEmpty) {
+      // Check if any service name suggests landscaping
+      bool isLandscaping = (booking['services'] as List).any((s) => 
+          s['name'].toString().toLowerCase().contains('landscape'));
+      
+      return isLandscaping ? 'Landscaping' : 'Gardening';
+    }
+    
     return "Garden Service";
+  }
+
+  String getServiceDetails(Map<String, dynamic> booking) {
+    if (booking['services'] != null && booking['services'].isNotEmpty) {
+      return (booking['services'] as List)
+          .map((s) => s['name'].toString())
+          .join(', ');
+    }
+    return booking['type']?.toString() ?? 'General Service';
   }
   
   @override
@@ -663,6 +688,10 @@ class BookingNotificationCard extends StatelessWidget {
     final status = booking['status']?.toString().toLowerCase() ?? 'pending';
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -673,30 +702,95 @@ class BookingNotificationCard extends StatelessWidget {
               children: [
                 Text(
                   "Booking #${booking['id']}",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: Colors.grey[800],
+                  ),
                 ),
                 _buildStatusChip(status),
               ],
             ),
+            SizedBox(height: 12),
+            if (booking['homeowner'] != null) 
+              Text(
+                "Homeowner: ${booking['homeowner']['name'] ?? 'Not specified'}",
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                ),
+              ),
             SizedBox(height: 8),
-            Text("Service Type: ${getServiceTypes(booking)}"),
-            Text("Date: ${booking['date'] ?? 'Not specified'}"),
-            Text("Time: ${booking['time'] ?? 'Not specified'}"),
-            Text("Address: ${booking['address'] ?? 'Not specified'}"),
-            Text("Total: ₱${booking['total_price']?.toString() ?? '0.00'}"),
+            Text(
+              "Service Type: ${getServiceType(booking)}",
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.green[700],
+              ),
+            ),
             SizedBox(height: 8),
+            Text(
+              "Services: ${getServiceDetails(booking)}",
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Date: ${booking['date'] ?? 'Not specified'}",
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Time: ${booking['time'] ?? 'Not specified'}",
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Address: ${booking['address'] ?? 'Not specified'}",
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Total: ₱${booking['total_price']?.toString() ?? '0.00'}",
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.green[800],
+              ),
+            ),
+            SizedBox(height: 12),
             
             if (status == 'pending')
               _buildActionButtons()
             else if (status == 'accepted')
               Text(
                 "Accepted on ${_formatDate(booking['updated_at'])}",
-                style: TextStyle(color: Colors.green),
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: Colors.green,
+                  fontStyle: FontStyle.italic,
+                ),
               )
             else if (status == 'declined')
               Text(
                 "Declined on ${_formatDate(booking['updated_at'])}",
-                style: TextStyle(color: Colors.red),
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: Colors.red,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
           ],
         ),
@@ -723,10 +817,17 @@ class BookingNotificationCard extends StatelessWidget {
     return Chip(
       label: Text(
         status.toUpperCase(),
-        style: TextStyle(color: Colors.white, fontSize: 12),
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       backgroundColor: color,
-      padding: EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
     );
   }
 
@@ -736,14 +837,39 @@ class BookingNotificationCard extends StatelessWidget {
       children: [
         TextButton(
           onPressed: onDecline,
-          child: Text("Decline"),
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          child: Text(
+            "DECLINE",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.red[700],
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
         SizedBox(width: 8),
         ElevatedButton(
           onPressed: onAccept,
-          child: Text("Accept"),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+          child: Text(
+            "ACCEPT",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: Colors.white,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green[700],
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
       ],
     );

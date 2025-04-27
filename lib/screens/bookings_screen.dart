@@ -5,6 +5,7 @@ import 'package:gardencare_app/services/pusher_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class BookingsScreen extends StatefulWidget {
   @override
@@ -152,6 +153,104 @@ class _BookingsScreenState extends State<BookingsScreen> {
   );
 }
 
+    void _showRatingDialog(Map<String, dynamic> booking) {
+  double _rating = 0;
+  final _feedbackController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.star, color: Colors.amber),
+            SizedBox(width: 10),
+            Text('Rate '),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'How would you rate your service with ${booking['gardener']?['name'] ?? 'the gardener'}?',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 20),
+              RatingBar.builder(
+                initialRating: _rating,
+                minRating: 1,
+                direction: Axis.horizontal,
+                allowHalfRating: true,
+                itemCount: 5,
+                itemPadding: EdgeInsets.symmetric(horizontal: 4.0),
+                itemBuilder: (context, _) => Icon(
+                  Icons.star,
+                  color: Colors.amber,
+                ),
+                onRatingUpdate: (rating) {
+                  _rating = rating;
+                },
+              ),
+              SizedBox(height: 20),
+              TextField(
+                controller: _feedbackController,
+                decoration: InputDecoration(
+                  labelText: 'Feedback (optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text("Cancel"),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ElevatedButton(
+            child: Text("Submit"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            onPressed: () async {
+              if (_rating == 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please select a rating')),
+                );
+                return;
+              }
+
+              try {
+                // Call your API to submit the rating
+                await _bookingService.submitRating(
+                  bookingId: booking['id'],
+                  rating: _rating,
+                  feedback: _feedbackController.text,
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Thank you for your feedback!')),
+                );
+
+                // Refresh bookings to update the UI
+                _fetchHomeownerBookings();
+                Navigator.of(context).pop();
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to submit rating: $e')),
+                );
+                  print('Rating submission error details: $e');
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
   @override
   void dispose() {
     // Make sure to disconnect Pusher when leaving the screen
@@ -164,6 +263,84 @@ class _BookingsScreenState extends State<BookingsScreen> {
     });
     super.dispose();
   }
+  
+    Widget _buildRatingSection(Map<String, dynamic> booking) {
+  if (booking['rating'] == null) {
+    return Column(
+      children: [
+        SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: () => _showRatingDialog(booking),
+          child: Text('Rate This Service'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+          ),
+        ),
+      ],
+    );
+  }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(height: 10),
+      Text(
+        "Your Rating:",
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey.shade800,
+        ),
+      ),
+      SizedBox(height: 4),
+      Row(
+        children: [
+          RatingBarIndicator(
+            rating: booking['rating']?.toDouble() ?? 0,
+            itemBuilder: (context, index) => Icon(
+              Icons.star,
+              color: Colors.amber,
+            ),
+            itemCount: 5,
+            itemSize: 20.0,
+            direction: Axis.horizontal,
+          ),
+          SizedBox(width: 8),
+          Text(
+            booking['rating']?.toStringAsFixed(1) ?? '0',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+      if (booking['feedback'] != null && booking['feedback'].toString().isNotEmpty) ...[
+        SizedBox(height: 8),
+        Text(
+          "Your Feedback:",
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade800,
+          ),
+        ),
+        SizedBox(height: 4),
+        Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          booking['feedback'],
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: Colors.grey.shade700,
+          ),
+        ),
+      ),],
+    ],
+  );
+}
+
     
     Widget _buildPaymentCard(Map<String, dynamic> payment) {
         var amountPaid = payment['amount_paid'] ?? 0;
@@ -272,6 +449,21 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
         style: TextStyle(fontWeight: FontWeight.bold),
       ),
       SizedBox(height: 8),
+
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('Payment Method:'),
+          Text(
+            'GCash',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
+            ),
+          ),
+        ],
+      ),
+      SizedBox(height: 8),
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -308,8 +500,10 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
         ),
       ],
     ],
+    
   );
 }
+
 
 
   Future<void> _fetchHomeownerBookings() async {
@@ -578,8 +772,15 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                           booking['gardener']['name'],
                                         ),
                                         SizedBox(height: 10),
-                                      ],
-                                      
+                                      ]else if (booking['service_provider'] != null) ...[
+                                    _buildInfoRow(
+                                      Icons.person_outline,
+                                      "Service Provider",
+                                      booking['service_provider']['name'],
+                                    ),
+                                    SizedBox(height: 10),
+                                  ],
+                                                                        
                                       _buildInfoRow(
                                         Icons.location_on_outlined,
                                         "Address",
@@ -660,8 +861,14 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                           ),
                         ),
                       ],
-                                                        ],
-                                  ),
+                           if (booking['status']?.toLowerCase() == 'completed') ...[
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: _buildRatingSection(booking),
+                          ),
+                          SizedBox(height: 16),
+                                            ],
+                              ]),
                                 ),
                               ],
                             ),

@@ -199,8 +199,57 @@ class _BookingFormState extends State<BookingForm> {
               Text('GCash Number: ${userProvider.gcashNo}'),
               SizedBox(height: 10),
               Text('Selected Services:', style: TextStyle(fontWeight: FontWeight.bold)),
-              // ... rest of your existing receipt content
-              // Make sure to include the GCash number in the receipt
+              
+              // Selected services list
+              ...selectedServiceIds.map((serviceId) {
+                final service = services.firstWhere((s) => s['id'] == serviceId);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Text('- ${service['name']} (₱${service['price']})'),
+                );
+              }).toList(),
+              
+              SizedBox(height: 10),
+              Divider(),
+              Text('Payment Summary:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Payment Method:'),
+                  Text('GCash', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              SizedBox(height: 5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Subtotal:'),
+                  Text('₱${totalPrice.toStringAsFixed(2)}'),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Payment Type:'),
+                  Text(paymentType),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Amount Paid:'),
+                  Text('₱${downPaymentAmount.toStringAsFixed(2)}'),
+                ],
+              ),
+              if (paymentType == "Down Payment")
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Remaining Balance:'),
+                    Text('₱${remainingBalance.toStringAsFixed(2)}'),
+                  ],
+                ),
             ],
           ),
         ),

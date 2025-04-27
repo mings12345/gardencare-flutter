@@ -90,6 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   role: 'Gardener',
                   email: email,
                   phone: phone,
+                  gcashNo: gcashNo,
                   address: address,
                 )),
               );
@@ -103,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   email: email,
                   phone: phone,
                   address: address,
+                  gcashNo: gcashNo,
                 )),
               );
               break;
