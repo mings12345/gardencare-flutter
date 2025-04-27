@@ -4,6 +4,7 @@ class User {
   final String phone;
   final String address;
   final String userType;
+  final String account;
   final int id;
   final String? profilePictureUrl; // Nullable field
    final String? bio;
@@ -12,6 +13,7 @@ class User {
     required this.name,
     required this.email,
     required this.phone,
+    required this.account,
     required this.address,
     required this.userType,
     required this.id,
@@ -26,6 +28,7 @@ class User {
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
       userType: json['user_type'] ?? '',
+      account: json['account'] ?? '',
       id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
       profilePictureUrl: json['profile_picture_url'],
        bio: json['bio'],

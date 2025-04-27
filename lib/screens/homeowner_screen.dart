@@ -15,14 +15,14 @@ class HomeownerScreen extends StatefulWidget {
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   HomeownerScreen({
     required this.name,
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   });
 
   @override
@@ -77,7 +77,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
     email: widget.email,
     address: widget.address,
     phone: widget.phone,
-    gcashNo: widget.gcashNo,
+    account: widget.account,
   ),
 ],
       ),

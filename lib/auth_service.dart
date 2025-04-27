@@ -193,7 +193,7 @@ class AuthService {
         'email': data['email'] ?? '',
         'phone': data['phone'] ?? '',
         'address': data['address'] ?? '',
-        'gcash_no': data['gcash_no'] ?? '',
+        'account': data['account'] ?? '',
       };
     } else if (response.statusCode == 404) {
       throw Exception('Profile not found. Please check the user ID.');

@@ -13,7 +13,7 @@ class ProfileScreen extends StatefulWidget {
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   const ProfileScreen({
     Key? key,
@@ -21,7 +21,7 @@ class ProfileScreen extends StatefulWidget {
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   }) : super(key: key);
 
   @override
@@ -33,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late String email;
   late String address;
   late String phone;
-  late String gcashNo;
+  late String account;
 
   @override
   void initState() {
@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     name = widget.name;
     email = widget.email;
     address = widget.address;
-    gcashNo = widget.gcashNo;
+    account = widget.account;
     phone = widget.phone;
   }
 
@@ -54,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           email: email,
           address: address,
           phone: phone,
-          gcashNo: gcashNo,
+          account: account,
         ),
       ),
     );
@@ -149,7 +149,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   email: email,
                   address: address,
                   phone: phone,
-                  gcashNo: gcashNo,
+                  account: account,
                   )), 
           Expanded(
             flex: 5,
@@ -320,7 +320,7 @@ class _TopPortion extends StatelessWidget {
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   const _TopPortion({
     Key? key,
@@ -328,7 +328,7 @@ class _TopPortion extends StatelessWidget {
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   }) : super(key: key);
 
   @override
@@ -366,7 +366,7 @@ class _TopPortion extends StatelessWidget {
                                 name: name,
                                 email: email,
                                 address: address,
-                                gcashNo: gcashNo,
+                                account: account,
                                 phone: phone,
                               )),
                     );

@@ -58,15 +58,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
           final profileData = await _authService.fetchProfileData(user.id.toString());
 
+        print('Profile Data: $profileData'); // Debugging line
 
           // Check for null values in profileData
           final name = profileData['name'] ?? '';
           final email = profileData['email'] ?? '';
           final phone = profileData['phone'] ?? '';
           final address = profileData['address'] ?? '';
-          final gcashNo = profileData['gcash_no'] ?? '';
+          final account = profileData['account'] ?? '';
           
-          userProvider.updateGcashNo(gcashNo);
+          userProvider.updateAccountNo(account);
 
           // Redirect based on user type
           switch (user.userType) {
@@ -78,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   email: email,
                   phone: phone,
                   address: address,
-                  gcashNo: gcashNo,
+                  account: account,
                 )),
               );
               break;
@@ -90,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   role: 'Gardener',
                   email: email,
                   phone: phone,
-                  gcashNo: gcashNo,
+                  account: account,
                   address: address,
                 )),
               );
@@ -104,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   email: email,
                   phone: phone,
                   address: address,
-                  gcashNo: gcashNo,
+                  account: account,
                 )),
               );
               break;

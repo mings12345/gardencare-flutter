@@ -407,7 +407,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('From:'),
-              Text(payment['sender_gcash_no'] ?? 'N/A'),
+              Text(payment['sender_no'] ?? 'N/A'),
             ],
           ),
           SizedBox(height: 8),
@@ -415,7 +415,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('To:'),
-              Text(payment['receiver_gcash_no'] ?? 'N/A'),
+              Text(payment['receiver_no'] ?? 'N/A'),
             ],
           ),
         ],
@@ -455,7 +455,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
         children: [
           Text('Payment Method:'),
           Text(
-            'GCash',
+            'Garden Care',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.green.shade700,
@@ -581,7 +581,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => HomeownerScreen(name: '', email: '', address: '', phone: '', gcashNo: '',)),
+              MaterialPageRoute(builder: (context) => HomeownerScreen(name: '', email: '', address: '', phone: '', account: '',)),
             );
           },
         ),

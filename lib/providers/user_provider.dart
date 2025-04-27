@@ -6,7 +6,7 @@ class UserProvider with ChangeNotifier {
   int? _homeownerId;
   String? _role;
   String? _userId;
-  String? _gcashNo;
+  String? _account;
 
   // Getters
   String? get token => _token;
@@ -14,7 +14,7 @@ class UserProvider with ChangeNotifier {
   int? get homeownerId => _homeownerId;
   String? get role => _role;
   String? get userId => _userId;
-  String? get gcashNo => _gcashNo;
+  String? get account => _account;
   
   // Combined status check
   bool get isLoggedIn => _token != null;
@@ -24,7 +24,7 @@ class UserProvider with ChangeNotifier {
     required String token,
     required Map<String, dynamic> userData,
     int? homeownerId,
-    String? gcashNo,
+    String? account,
     String? role,
     String? userId,
   }) {
@@ -33,7 +33,7 @@ class UserProvider with ChangeNotifier {
     _homeownerId = homeownerId;
     _role = role;
     _userId = userId;
-    _gcashNo = gcashNo;
+    _account = account;
     notifyListeners();
   }
 
@@ -67,8 +67,8 @@ class UserProvider with ChangeNotifier {
     _userId = null;
     notifyListeners();
   }
-  void updateGcashNo(String gcashNo) {
-  _gcashNo = gcashNo;
+  void updateAccountNo(String account) {
+  _account = account;
   notifyListeners();
 }
 

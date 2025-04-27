@@ -50,10 +50,10 @@ class MyApp extends StatelessWidget {
               email: 'john.doe@example.com',
               address: '123 Garden St, Green City',
               phone: '123-456-7890',
-              gcashNo: '1234567890',
+              account: '1234567890',
             ),
         '/service-provider-screen': (context) => ServiceProviderScreen(
-              gcashNo: '1234567890',
+              account: '1234567890',
               name: 'John Doe',
               role: 'Service Provider',
               email: 'john.doe@example.com',
@@ -63,7 +63,7 @@ class MyApp extends StatelessWidget {
         '/gardener-dashboard': (context) => GardenerDashboard(
               name: 'John Doe',
               role: 'Gardener',
-              gcashNo: '1234567890',
+              account: '1234567890',
               email: 'john.doe@example.com',
               phone: '123-456-7890',
               address: '123 Garden St, Green City',
@@ -78,7 +78,7 @@ class MyApp extends StatelessWidget {
               email: 'john.doe@example.com',
               address: '123 Garden St, Green City',
               phone: '123-456-7890',
-              gcashNo: '1234567890',
+              account: '1234567890',
             ),
         '/message': (context) => ChatListScreen()
       }

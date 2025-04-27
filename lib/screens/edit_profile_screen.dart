@@ -3,14 +3,16 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/auth_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:gardencare_app/providers/user_provider.dart';
 import 'dart:math';
+import 'package:provider/provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String name;
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   const EditProfileScreen({
     Key? key,
@@ -18,7 +20,7 @@ class EditProfileScreen extends StatefulWidget {
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   }) : super(key: key);
 
   @override
@@ -30,7 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _emailController;
   late TextEditingController _addressController;
   late TextEditingController _phoneController;
-  late TextEditingController _gcashController;
+  late TextEditingController _accountController;
 
   // OTP Verification State
   String? _otp;
@@ -46,7 +48,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController = TextEditingController(text: widget.email);
     _addressController = TextEditingController(text: widget.address);
     _phoneController = TextEditingController(text: widget.phone);
-    _gcashController = TextEditingController(text: widget.gcashNo);
+    _accountController = TextEditingController(text: widget.account);
   }
 
   @override
@@ -55,21 +57,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
-    _gcashController.dispose();
+    _accountController.dispose();
     super.dispose();
   }
 
   Future<void> _sendOtp() async {
-    if (_gcashController.text.isEmpty) {
+    if (_accountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter your GCash number")),
+        const SnackBar(content: Text("Please enter your Account number")),
       );
       return;
     }
 
-    if (!RegExp(r'^09\d{9}$').hasMatch(_gcashController.text)) {
+    if (!RegExp(r'^09\d{9}$').hasMatch(_accountController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid GCash number (09XXXXXXXXX)")),
+        const SnackBar(content: Text("Please enter a valid Account number (09XXXXXXXXX)")),
       );
       return;
     }
@@ -93,11 +95,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("OTP Sent to your GCash number", style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text("OTP Sent to your account number", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text("Your OTP is: $_otp"),
             const SizedBox(height: 4),
-            const Text("Enter this code to verify your GCash number"),
+            const Text("Enter this code to verify your account number"),
           ],
         ),
         duration: const Duration(seconds: 10),
@@ -131,9 +133,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
   }
 
-  Future<void> _removeGcash() async {
+  Future<void> _removeAccount() async {
     setState(() {
-      _gcashController.clear();
+      _accountController.clear();
       _showOtpField = false;
     });
     _saveChanges();
@@ -145,8 +147,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'email': _emailController.text,
       'address': _addressController.text,
       'phone': _phoneController.text,
-      'gcash_no': _gcashController.text,
+      'account': _accountController.text,
     };
+    print("Updated Profile: $updatedProfile");
 
     final String baseUrl = dotenv.get('BASE_URL'); 
     final token = await AuthService.getToken();
@@ -162,6 +165,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       if (response.statusCode == 200) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      userProvider.updateAccountNo(_accountController.text);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Profile updated successfully!"),
@@ -216,23 +221,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 16),
             
-            // GCash Number Section
+            //  Number Section
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
-                    controller: _gcashController,
+                    controller: _accountController,
                     decoration: const InputDecoration(
-                      labelText: "GCash Number",
+                      labelText: "Account Number",
                       hintText: "09XXXXXXXXX",
                     ),
                     keyboardType: TextInputType.phone,
                   ),
                 ),
-                if (_gcashController.text.isNotEmpty)
+                if (_accountController.text.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: _removeGcash,
+                    onPressed: _removeAccount,
                   ),
               ],
             ),
@@ -267,20 +272,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ],
               ),
-            ] else if (_gcashController.text.isNotEmpty) ...[
+            ] else if (_accountController.text.isNotEmpty) ...[
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _isSendingOtp ? null : _sendOtp,
-                  child: const Text("Update GCash Number"),
+                  child: const Text("Update Account Number"),
                 ),
               ),
             ],
             
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _gcashController.text.isNotEmpty && !_showOtpField
+              onPressed: _accountController.text.isNotEmpty && !_showOtpField
                   ? _saveChanges
                   : _showOtpField
                       ? null

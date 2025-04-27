@@ -19,10 +19,10 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
   late PusherService _pusherService;
   List<Map<String, dynamic>> _bookingNotifications = [];
   bool _isLoading = true;
-  String? gcashNo;
+  String? account;
   String? otp;
   String? enteredOtp;
-  bool showGcashRegistration = false;
+  bool showAccountRegistration = false;
   bool isSendingOtp = false;
   bool isVerifyingOtp = false;
   
@@ -150,7 +150,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
     );
   }
 
-    void _showGcashRegistration(Map<String, dynamic> booking) {
+    void _showAccountRegistration(Map<String, dynamic> booking) {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -164,7 +164,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
                   children: [
                     Icon(Icons.phone_android, color: Colors.green),
                     SizedBox(width: 10),
-                    Text('Register GCash   '),
+                    Text('Register Account'),
                   ],
                 ),
                 Positioned(
@@ -175,7 +175,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
                     onPressed: () {
                       Navigator.of(context).pop();
                       setState(() {
-                        showGcashRegistration = false;
+                        showAccountRegistration = false;
                         otp = null; // Reset OTP if user cancels
                       });
                     },
@@ -189,18 +189,18 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
                 children: [
                   TextFormField(
                     decoration: InputDecoration(
-                      labelText: "GCash Mobile Number",
+                      labelText: "Account Number",
                       hintText: "09XXXXXXXXX",
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.phone,
-                    onChanged: (value) => gcashNo = value,
+                    onChanged: (value) => account = value,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your GCash number';
+                        return 'Please enter your account number';
                       }
                       if (!RegExp(r'^09\d{9}$').hasMatch(value)) {
-                        return 'Please enter a valid GCash number (09XXXXXXXXX)';
+                        return 'Please enter a valid account number (09XXXXXXXXX)';
                       }
                       return null;
                     },
@@ -243,7 +243,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
                   onPressed: () {
                     Navigator.of(context).pop();
                     setState(() {
-                      showGcashRegistration = false;
+                      showAccountRegistration = false;
                       otp = null; // Reset OTP if user cancels
                     });
                   },
@@ -280,13 +280,13 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
 }   
 
     Future<void> _sendOtp() async {
-  if (gcashNo == null || gcashNo!.isEmpty) {
-    _showError("Please enter your GCash number");
+  if (account == null || account!.isEmpty) {
+    _showError("Please enter your account number");
     return;
   }
 
-  if (!RegExp(r'^09\d{9}$').hasMatch(gcashNo!)) {
-    _showError("Please enter a valid GCash number (09XXXXXXXXX)");
+  if (!RegExp(r'^09\d{9}$').hasMatch(account!)) {
+    _showError("Please enter a valid account number (09XXXXXXXXX)");
     return;
   }
 
@@ -309,11 +309,11 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("GCash OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
+          Text("OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
           SizedBox(height: 4),
           Text("Your OTP is $otp", style: TextStyle(fontSize: 16)),
           SizedBox(height: 4),
-          Text("Please enter it to verify your GCash number"),
+          Text("Please enter it to verify your account number"),
         ],
       ),
       duration: Duration(seconds: 10),
@@ -339,7 +339,7 @@ Future<void> _resendOtp() async {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("New GCash OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
+          Text("New OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
           SizedBox(height: 4),
           Text("Your new OTP is $otp", style: TextStyle(fontSize: 16)),
         ],
@@ -369,36 +369,36 @@ Future<void> _verifyOtp(Map<String, dynamic> booking) async {
   setState(() => isVerifyingOtp = true);
 
   try {
-    // Save GCash number to backend
+    // Save number to backend
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     final baseUrl = dotenv.get('BASE_URL');
     final token = prefs.getString('token') ?? '';
 
     final response = await http.post(
-      Uri.parse('$baseUrl/api/update_gcash'),
+      Uri.parse('$baseUrl/api/update_account'),
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
         "Authorization": "Bearer $token",
       },
-      body: jsonEncode({"gcash_no": gcashNo}),
+      body: jsonEncode({"account": account}),
     );
 
     if (response.statusCode == 200) {
       // Update user provider
-      userProvider.updateGcashNo(gcashNo!);
+      userProvider.updateAccountNo(account??'');
       
       // Close dialog
       Navigator.of(context).pop();
       setState(() {
-        showGcashRegistration = false;
+        showAccountRegistration = false;
       });
       
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("GCash number verified successfully!"),
+          content: Text("Account number verified successfully!"),
           backgroundColor: Colors.green,
         ),
       );
@@ -406,7 +406,7 @@ Future<void> _verifyOtp(Map<String, dynamic> booking) async {
       // Now proceed with booking acceptance
       await _processBookingAcceptance(booking);
     } else {
-      _showError("Failed to save GCash number: ${response.body}");
+      _showError("Failed to save Account number: ${response.body}");
     }
   } catch (e) {
     _showError("Error: ${e.toString()}");
@@ -468,11 +468,11 @@ void _showError(String message) {
 
       Future<void> _acceptBooking(Map<String, dynamic> booking) async {
          final userProvider = Provider.of<UserProvider>(context, listen: false);
-          if (userProvider.gcashNo == null || userProvider.gcashNo!.isEmpty) {
+          if (userProvider.account == null || userProvider.account!.isEmpty) {
     setState(() {
-      showGcashRegistration = true;
+      showAccountRegistration = true;
     });
-    _showGcashRegistration(booking); // Pass the booking to the dialog
+    _showAccountRegistration(booking); // Pass the booking to the dialog
     return;
   }
     await _processBookingAcceptance(booking);

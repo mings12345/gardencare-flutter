@@ -11,7 +11,7 @@ class ProviderProfileScreen extends StatefulWidget {
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   const ProviderProfileScreen({
     Key? key,
@@ -19,7 +19,7 @@ class ProviderProfileScreen extends StatefulWidget {
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   }) : super(key: key);
 
   @override
@@ -31,7 +31,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
   late String email;
   late String address;
   late String phone;
-  late String gcashNo;
+  late String account;
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
     name = widget.name;
     email = widget.email;
     address = widget.address;
-    gcashNo = widget.gcashNo;
+    account = widget.account;
     phone = widget.phone;
   }
 
@@ -52,7 +52,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
           email: email,
           address: address,
           phone: phone,
-          gcashNo: gcashNo,
+          account: account,
         ),
       ),
     );
@@ -124,7 +124,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
               email: email,
               address: address,
               phone: phone,
-              gcashNo: gcashNo,
+              account: account,
             ),
           ),
           Expanded(
@@ -244,7 +244,7 @@ class _TopPortion extends StatelessWidget {
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   const _TopPortion({
     Key? key,
@@ -252,7 +252,7 @@ class _TopPortion extends StatelessWidget {
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   }) : super(key: key);
 
   @override
@@ -291,7 +291,7 @@ class _TopPortion extends StatelessWidget {
                           email: email,
                           address: address,
                           phone: phone,
-                          gcashNo: gcashNo,
+                          account: account,
                           role: 'Service Provider',
                         ),
                       ),

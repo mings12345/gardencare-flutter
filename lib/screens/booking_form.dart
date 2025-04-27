@@ -25,10 +25,10 @@ class _BookingFormState extends State<BookingForm> {
   TimeOfDay? selectedTime;
   String? specialInstructions;
   bool _isLoading = false;
-  String? gcashNo;
+  String? account;
   String? otp;
   String? enteredOtp;
-  bool showGcashRegistration = false;
+  bool showAccountRegistration = false;
   bool isSendingOtp = false;
   bool isVerifyingOtp = false;
 
@@ -46,7 +46,7 @@ class _BookingFormState extends State<BookingForm> {
   List<Map<String, dynamic>> gardeners = [];
   List<Map<String, dynamic>> services = [];
   List<Map<String, dynamic>> serviceProviders = [];
-  List<String> paymentMethods = ["Credit Card", "Debit Card", "GCash", "PayMaya", "Bank Transfer"];
+  List<String> paymentMethods = ["Credit Card", "Debit Card", "Garden Care", "PayMaya", "Bank Transfer"];
 
   @override
   void initState() {
@@ -163,12 +163,12 @@ class _BookingFormState extends State<BookingForm> {
   void _showReceipt() {
   final userProvider = Provider.of<UserProvider>(context, listen: false);
   
-  // Check if user has GCash number
-  if (userProvider.gcashNo == null || userProvider.gcashNo!.isEmpty) {
+  // Check if user has number
+  if (userProvider.account == null || userProvider.account!.isEmpty) {
     setState(() {
-      showGcashRegistration = true;
+      showAccountRegistration = true;
     });
-    _showGcashRegistration();
+    _showAccountRegistration();
     return;
   }
 
@@ -196,7 +196,7 @@ class _BookingFormState extends State<BookingForm> {
               Text('Date: ${selectedDate?.day}/${selectedDate?.month}/${selectedDate?.year}'),
               Text('Time: ${selectedTime?.format(context)}'),
               SizedBox(height: 10),
-              Text('GCash Number: ${userProvider.gcashNo}'),
+              Text('Wallet Number: ${userProvider.account}'),
               SizedBox(height: 10),
               Text('Selected Services:', style: TextStyle(fontWeight: FontWeight.bold)),
               
@@ -217,7 +217,7 @@ class _BookingFormState extends State<BookingForm> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Payment Method:'),
-                  Text('GCash', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Garden Care Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
               SizedBox(height: 5),
@@ -275,7 +275,7 @@ class _BookingFormState extends State<BookingForm> {
     },
   );
 }
-void _showGcashRegistration() {
+void _showAccountRegistration() {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -289,7 +289,7 @@ void _showGcashRegistration() {
                   children: [
                     Icon(Icons.phone_android, color: Colors.green),
                     SizedBox(width: 10),
-                    Text('Register GCash   '),
+                    Text('Register Wallet'),
                   ],
                 ),
                 Positioned(
@@ -300,7 +300,7 @@ void _showGcashRegistration() {
                     onPressed: () {
                       Navigator.of(context).pop();
                       setState(() {
-                        showGcashRegistration = false;
+                        showAccountRegistration = false;
                         otp = null; // Reset OTP if user cancels
                       });
                     },
@@ -314,18 +314,18 @@ void _showGcashRegistration() {
                 children: [
                   TextFormField(
                     decoration: InputDecoration(
-                      labelText: "GCash Mobile Number",
+                      labelText: "Mobile Number",
                       hintText: "09XXXXXXXXX",
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.phone,
-                    onChanged: (value) => gcashNo = value,
+                    onChanged: (value) => account = value,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your GCash number';
+                        return 'Please enter your phone number';
                       }
                       if (!RegExp(r'^09\d{9}$').hasMatch(value)) {
-                        return 'Please enter a valid GCash number (09XXXXXXXXX)';
+                        return 'Please enter a valid phone number (09XXXXXXXXX)';
                       }
                       return null;
                     },
@@ -368,7 +368,7 @@ void _showGcashRegistration() {
                   onPressed: () {
                     Navigator.of(context).pop();
                     setState(() {
-                      showGcashRegistration = false;
+                      showAccountRegistration = false;
                       otp = null; // Reset OTP if user cancels
                     });
                   },
@@ -404,13 +404,13 @@ void _showGcashRegistration() {
   );
 }
 Future<void> _sendOtp() async {
-  if (gcashNo == null || gcashNo!.isEmpty) {
-    _showError("Please enter your GCash number");
+  if (account == null || account!.isEmpty) {
+    _showError("Please enter your account number");
     return;
   }
 
-  if (!RegExp(r'^09\d{9}$').hasMatch(gcashNo!)) {
-    _showError("Please enter a valid GCash number (09XXXXXXXXX)");
+  if (!RegExp(r'^09\d{9}$').hasMatch(account!)) {
+    _showError("Please enter a valid account number (09XXXXXXXXX)");
     return;
   }
 
@@ -433,11 +433,11 @@ Future<void> _sendOtp() async {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("GCash OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
+          Text("Wallet OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
           SizedBox(height: 4),
           Text("Your OTP is $otp", style: TextStyle(fontSize: 16)),
           SizedBox(height: 4),
-          Text("Please enter it to verify your GCash number"),
+          Text("Please enter it to verify your account number"),
         ],
       ),
       duration: Duration(seconds: 10),
@@ -463,7 +463,7 @@ Future<void> _resendOtp() async {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("New GCash OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
+          Text("New OTP Sent!", style: TextStyle(fontWeight: FontWeight.bold)),
           SizedBox(height: 4),
           Text("Your new OTP is $otp", style: TextStyle(fontSize: 16)),
         ],
@@ -493,36 +493,36 @@ Future<void> _verifyOtp() async {
   setState(() => isVerifyingOtp = true);
 
   try {
-    // Save GCash number to backend
+    // Save number to backend
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     final baseUrl = dotenv.get('BASE_URL');
     final token = prefs.getString('token') ?? '';
 
     final response = await http.post(
-      Uri.parse('$baseUrl/api/update_gcash'),
+      Uri.parse('$baseUrl/api/update_account'),
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
         "Authorization": "Bearer $token",
       },
-      body: jsonEncode({"gcash_no": gcashNo}),
+      body: jsonEncode({"account": account}),
     );
 
     if (response.statusCode == 200) {
       // Update user provider
-      userProvider.updateGcashNo(gcashNo!);
+      userProvider.updateAccountNo(account!);
       
       // Close dialog
       Navigator.of(context).pop();
       setState(() {
-        showGcashRegistration = false;
+        showAccountRegistration = false;
       });
       
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("GCash number verified successfully!"),
+          content: Text("Account number verified successfully!"),
           backgroundColor: Colors.green,
         ),
       );
@@ -530,7 +530,8 @@ Future<void> _verifyOtp() async {
       // Now show the receipt
       _showReceipt();
     } else {
-      _showError("Failed to save GCash number: ${response.body}");
+      print(response.body);
+      _showError("Failed to save Account number: ${response.body}");
     }
   } catch (e) {
     _showError("Error: ${e.toString()}");
@@ -591,7 +592,7 @@ Future<void> submitBooking() async {
       "payment": {
         "amount_paid": downPaymentAmount,
         "payment_date": DateTime.now().toIso8601String(),
-        "sender_gcash_no": userProvider.gcashNo,
+        "sender_no": userProvider.account,
       }
     };
 
@@ -944,12 +945,12 @@ Widget _buildPaymentSection() {
             ],
           ),
           
-          // GCash Payment Method (readonly)
+          // Payment Method (readonly)
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: TextFormField(
               readOnly: true,
-              initialValue: "GCash",
+              initialValue: "Garden Care Wallet",
               decoration: InputDecoration(
                 labelText: "Payment Method",
                 border: OutlineInputBorder(),
@@ -1014,8 +1015,8 @@ Widget _buildPaymentSection() {
     bool canProceed = true;
     String buttonText = "PROCEED PAYMENT";
     
-    // Additional validation for GCash payment
-    if (paymentMethod == "GCash" && paymentProofImage == null) {
+    // Additional validation for  payment
+    if (paymentMethod == "Garden Care" && paymentProofImage == null) {
       canProceed = false;
       buttonText = "PLEASE UPLOAD PAYMENT PROOF";
     }

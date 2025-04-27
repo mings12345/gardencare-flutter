@@ -20,7 +20,7 @@ class ServiceProviderScreen extends StatefulWidget {
   final String email;
   final String phone;
   final String address;
-  final String gcashNo;
+  final String account;
 
   ServiceProviderScreen({
     required this.name,
@@ -28,7 +28,7 @@ class ServiceProviderScreen extends StatefulWidget {
     required this.email,
     required this.phone,
     required this.address,
-    required this.gcashNo,
+    required this.account,
   });
 
     @override
@@ -120,7 +120,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                   email: widget.email, 
                   phone: widget.phone,  
                   address: widget.address, 
-                   gcashNo: widget.gcashNo,
+                   account: widget.account,
                 ),
               ),
             );

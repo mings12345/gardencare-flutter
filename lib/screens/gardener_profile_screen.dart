@@ -11,7 +11,7 @@ class GardenerProfileScreen extends StatefulWidget {
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   const GardenerProfileScreen({
     Key? key,
@@ -19,7 +19,7 @@ class GardenerProfileScreen extends StatefulWidget {
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   }) : super(key: key);
 
   @override
@@ -31,7 +31,7 @@ class _GardenerProfileScreenState extends State<GardenerProfileScreen> {
   late String email;
   late String address;
   late String phone;
-  late String gcashNo;
+  late String account;
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _GardenerProfileScreenState extends State<GardenerProfileScreen> {
     name = widget.name;
     email = widget.email;
     address = widget.address;
-    gcashNo = widget.gcashNo;
+    account = widget.account;
     phone = widget.phone;
   }
 
@@ -52,7 +52,7 @@ class _GardenerProfileScreenState extends State<GardenerProfileScreen> {
           email: email,
           address: address,
           phone: phone,
-          gcashNo: gcashNo,
+          account: account,
         ),
       ),
     );
@@ -124,7 +124,7 @@ class _GardenerProfileScreenState extends State<GardenerProfileScreen> {
               email: email,
               address: address,
               phone: phone,
-              gcashNo: gcashNo,
+              account: account,
             ),
           ),
           Expanded(
@@ -251,7 +251,7 @@ class _TopPortion extends StatelessWidget {
   final String email;
   final String address;
   final String phone;
-  final String gcashNo;
+  final String account;
 
   const _TopPortion({
     Key? key,
@@ -259,7 +259,7 @@ class _TopPortion extends StatelessWidget {
     required this.email,
     required this.address,
     required this.phone,
-    required this.gcashNo,
+    required this.account,
   }) : super(key: key);
 
   @override
@@ -299,7 +299,7 @@ class _TopPortion extends StatelessWidget {
                           address: address,
                           role: "Gardener",
                           phone: phone,
-                          gcashNo: gcashNo,
+                          account: account,
                         ),
                       ),
                     );

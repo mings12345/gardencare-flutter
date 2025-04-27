@@ -19,7 +19,7 @@ class GardenerDashboard extends StatefulWidget {
   final String email;
   final String phone;
   final String address;
-  final String gcashNo;
+  final String account;
 
   GardenerDashboard({
     required this.name,
@@ -27,7 +27,7 @@ class GardenerDashboard extends StatefulWidget {
     required this.email,
     required this.phone,
     required this.address,
-    required this.gcashNo,
+    required this.account,
   });
 
   @override
@@ -131,7 +131,7 @@ class _GardenerDashboardState extends State<GardenerDashboard> {
                       name: widget.name, // Changed to widget.name
                       email: widget.email,
                       phone: widget.phone,
-                      gcashNo: widget.gcashNo,
+                      account: widget.account,
                       address: widget.address,
                     ),
                   ),
