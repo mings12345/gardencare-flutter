@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/auth_service.dart';
@@ -7,6 +9,7 @@ import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:http/http.dart' as http;
+
 
 class ProfileScreen extends StatefulWidget {
   final String name;
@@ -34,6 +37,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late String address;
   late String phone;
   late String account;
+  double balance = 0.0;
+List<dynamic> transactions = [];
 
   @override
   void initState() {
@@ -43,7 +48,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
     address = widget.address;
     account = widget.account;
     phone = widget.phone;
+      _loadWalletData();
   }
+     Future<void> _loadWalletData() async {
+  final token = await AuthService.getToken();
+  if (token == null) return;
+
+  try {
+    final String baseUrl = dotenv.get('BASE_URL');
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/wallet'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      
+      // Safe parsing of balance
+      final dynamic balanceValue = data['balance'];
+      final double parsedBalance = balanceValue is String 
+          ? double.tryParse(balanceValue) ?? 0.0
+          : (balanceValue as num?)?.toDouble() ?? 0.0;
+
+      // Safe parsing of transactions
+      final List<dynamic> transactionList = data['transactions'] ?? [];
+      final List<Map<String, dynamic>> parsedTransactions = transactionList.map((t) {
+        final dynamic amountValue = t['amount'];
+        final double parsedAmount = amountValue is String
+            ? double.tryParse(amountValue) ?? 0.0
+            : (amountValue as num?)?.toDouble() ?? 0.0;
+
+        return {
+          'id': t['id'],
+          'amount': parsedAmount,
+          'transaction_type': t['transaction_type'],
+          'description': t['description'],
+          'created_at': t['created_at'],
+        };
+      }).toList();
+
+      setState(() {
+        balance = parsedBalance;
+        transactions = parsedTransactions;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load wallet data: ${response.statusCode}')),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error loading wallet: $e')),
+    );
+    debugPrint('Error details: $e');
+  }
+}
 
   void _editProfile() async {
     final updatedProfile = await Navigator.push(
@@ -68,6 +129,176 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     }
   }
+
+    void _openCashInDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      String amount = '';
+      String accountNumber = widget.account;
+
+      return AlertDialog(
+        title: const Text('Cash In'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              onChanged: (value) => amount = value,
+            ),
+            TextFormField(
+              initialValue: accountNumber,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Account Number'),
+              onChanged: (value) => accountNumber = value,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amount.isEmpty || accountNumber.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+
+              final token = await AuthService.getToken();
+              if (token == null) return;
+
+              try {
+                final String baseUrl = dotenv.get('BASE_URL');
+                final response = await http.post(
+                  Uri.parse('$baseUrl/api/wallet/cash-in'),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: json.encode({
+                    'amount': amount,
+                    'account_number': accountNumber,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  final data = json.decode(response.body);
+                  setState(() {
+                    balance = data['new_balance']?.toDouble() ?? balance;
+                  });
+                  _loadWalletData(); // Refresh transactions
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cash in successful')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${response.body}')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+    void _openWithdrawDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      String amount = '';
+      String accountNumber = widget.account;
+
+      return AlertDialog(
+        title: const Text('Withdraw'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              onChanged: (value) => amount = value,
+            ),
+            TextFormField(
+              initialValue: accountNumber,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Account Number'),
+              onChanged: (value) => accountNumber = value,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amount.isEmpty || accountNumber.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+
+              final token = await AuthService.getToken();
+              if (token == null) return;
+
+              try {
+                final String baseUrl = dotenv.get('BASE_URL');
+                final response = await http.post(
+                  Uri.parse('$baseUrl/api/wallet/withdraw'),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: json.encode({
+                    'amount': amount,
+                    'account_number': accountNumber,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  final data = json.decode(response.body);
+                  setState(() {
+                    balance = data['new_balance']?.toDouble() ?? balance;
+                  });
+                  _loadWalletData(); // Refresh transactions
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Withdrawal successful')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${response.body}')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   void _viewBookingHistory() {
     Navigator.push(
@@ -207,6 +438,111 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     ],
                   ),
+                  Card(
+  elevation: 4,
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+  child: Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Wallet Balance',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '\$${balance.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+          ],
+        ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: _openCashInDialog,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                ),
+                child: const Text('Cash In'),
+              ),
+              ElevatedButton(
+                onPressed: _openWithdrawDialog,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                ),
+                child: const Text('Withdraw'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+      if (transactions.isNotEmpty) ...[
+  const Padding(
+    padding: EdgeInsets.symmetric(vertical: 8.0),
+    child: Text(
+      'Transaction History',
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ),
+  RefreshIndicator( 
+   onRefresh: _loadWalletData,
+   child: SizedBox(
+    height: 200, // Fixed height for scrollable list
+    child: ListView.builder(
+  itemCount: transactions.length,
+  itemBuilder: (context, index) {
+    final transaction = transactions[index];
+    final amount = transaction['amount'] is double 
+        ? transaction['amount'] as double
+        : double.tryParse(transaction['amount'].toString()) ?? 0.0;
+        
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 4),
+      child: ListTile(
+        leading: Icon(
+          transaction['transaction_type'] == 'credit' 
+              ? Icons.arrow_circle_up 
+              : Icons.arrow_circle_down,
+          color: transaction['transaction_type'] == 'credit' 
+              ? Colors.green 
+              : Colors.red,
+        ),
+        title: Text(transaction['description'] ?? 'No description'),
+        subtitle: Text(transaction['created_at'] ?? ''),
+        trailing: Text(
+          '${transaction['transaction_type'] == 'credit' ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
+          style: TextStyle(
+            color: transaction['transaction_type'] == 'credit' 
+                ? Colors.green 
+                : Colors.red,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  },
+)
+  ),
+  )
+],
+        ],
+      ),
+    ),
+  ),
+  const SizedBox(height: 20),
                   const SizedBox(height: 30),
                   _buildActionCard(
                     context,

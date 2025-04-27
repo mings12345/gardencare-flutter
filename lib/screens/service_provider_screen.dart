@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/availability_screen.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
@@ -13,6 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/total_booking.dart';
 import 'package:gardencare_app/screens/total_service_screen.dart';
 import 'package:gardencare_app/screens/total_earnings.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ServiceProviderScreen extends StatefulWidget {
   final String name;
@@ -31,21 +35,353 @@ class ServiceProviderScreen extends StatefulWidget {
     required this.account,
   });
 
-    @override
+  @override
   _ServiceProviderScreenState createState() => _ServiceProviderScreenState();
 }
 
 class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
   int bookingCount = 0;
   bool isLoading = true;
+  double balance = 0.0;
+  double totalEarnings = 0.0;
+  List<dynamic> transactions = [];
+  bool isLoadingWallet = false;
+  bool isLoadingEarnings = false;
 
   @override
   void initState() {
     super.initState();
     _fetchBookingCount();
+    _loadWalletData();
+    _fetchTotalEarnings();
   }
 
-      Future<void> _fetchBookingCount() async {
+  Future<void> _fetchTotalEarnings() async {
+    setState(() => isLoadingEarnings = true);
+    try {
+      final bookingService = BookingService();
+      final earnings = await bookingService.fetchTotalEarnings();
+      setState(() {
+        totalEarnings = earnings;
+      });
+    } catch (e) {
+      print('Error fetching total earnings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load earnings data')),
+      );
+    } finally {
+      setState(() => isLoadingEarnings = false);
+    }
+  }
+
+  Future<void> _loadWalletData() async {
+    setState(() => isLoadingWallet = true);
+    final token = await AuthService.getToken();
+    if (token == null) return;
+
+    try {
+      final String baseUrl = dotenv.get('BASE_URL');
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/wallet'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          balance = (data['balance'] as num?)?.toDouble() ?? 0.0;
+          transactions = List<Map<String, dynamic>>.from(data['transactions'] ?? []);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading wallet: $e')),
+      );
+    } finally {
+      setState(() => isLoadingWallet = false);
+    }
+  }
+
+  void _showWalletDetails(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
+            children: [
+              Text(
+                'Wallet Balance',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '\$${balance.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: _openCashInDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                    child: const Text('Cash In'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _openWithdrawDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                    ),
+                    child: const Text('Withdraw'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _loadWalletData,
+                  child: transactions.isEmpty
+                      ? Center(child: Text('No transactions yet'))
+                      : ListView.builder(
+                          itemCount: transactions.length,
+                          itemBuilder: (context, index) {
+                            final transaction = transactions[index];
+                            final amount = transaction['amount'] is double 
+                                ? transaction['amount'] as double
+                                : double.tryParse(transaction['amount'].toString()) ?? 0.0;
+                            
+                            return Card(
+                              margin: EdgeInsets.symmetric(vertical: 4),
+                              child: ListTile(
+                                leading: Icon(
+                                  transaction['transaction_type'] == 'credit' 
+                                      ? Icons.arrow_circle_up 
+                                      : Icons.arrow_circle_down,
+                                  color: transaction['transaction_type'] == 'credit' 
+                                      ? Colors.green 
+                                      : Colors.red,
+                                ),
+                                title: Text(transaction['description'] ?? 'No description'),
+                                subtitle: Text(transaction['created_at'] ?? ''),
+                                trailing: Text(
+                                  '${transaction['transaction_type'] == 'credit' ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: transaction['transaction_type'] == 'credit' 
+                                        ? Colors.green 
+                                        : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _openCashInDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        String amount = '';
+        String accountNumber = widget.account;
+
+        return AlertDialog(
+          title: const Text('Cash In'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount'),
+                onChanged: (value) => amount = value,
+              ),
+              TextFormField(
+                initialValue: accountNumber,
+                keyboardType: TextInputType.text,
+                decoration: const InputDecoration(labelText: 'Account Number'),
+                onChanged: (value) => accountNumber = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (amount.isEmpty || accountNumber.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all fields')),
+                  );
+                  return;
+                }
+
+                final token = await AuthService.getToken();
+                if (token == null) return;
+
+                try {
+                  final String baseUrl = dotenv.get('BASE_URL');
+                  final response = await http.post(
+                    Uri.parse('$baseUrl/api/wallet/cash-in'),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: json.encode({
+                      'amount': amount,
+                      'account_number': accountNumber,
+                    }),
+                  );
+
+                  if (response.statusCode == 200) {
+                    await _loadWalletData();
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Cash in successful')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${response.body}')),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              },
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openWithdrawDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        String amount = '';
+        String accountNumber = widget.account;
+
+        return AlertDialog(
+          title: const Text('Withdraw'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount'),
+                onChanged: (value) => amount = value,
+              ),
+              TextFormField(
+                initialValue: accountNumber,
+                keyboardType: TextInputType.text,
+                decoration: const InputDecoration(labelText: 'Account Number'),
+                onChanged: (value) => accountNumber = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (amount.isEmpty || accountNumber.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all fields')),
+                  );
+                  return;
+                }
+
+                final token = await AuthService.getToken();
+                if (token == null) return;
+
+                try {
+                  final String baseUrl = dotenv.get('BASE_URL');
+                  final response = await http.post(
+                    Uri.parse('$baseUrl/api/wallet/withdraw'),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: json.encode({
+                      'amount': amount,
+                      'account_number': accountNumber,
+                    }),
+                  );
+
+                  if (response.statusCode == 200) {
+                    await _loadWalletData();
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Withdrawal successful')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${response.body}')),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              },
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _refreshAllData() async {
+    setState(() {
+      isLoading = true;
+      isLoadingWallet = true;
+      isLoadingEarnings = true;
+    });
+    
+    await Future.wait([
+      _fetchBookingCount(),
+      _loadWalletData(),
+      _fetchTotalEarnings(),
+    ]);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dashboard refreshed')),
+      );
+    }
+  }
+
+  Future<void> _fetchBookingCount() async {
     try {
       final bookingService = BookingService();
       final count = await bookingService.fetchBookingCount();
@@ -59,7 +395,6 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
         isLoading = false;
       });
       print('Error fetching booking count: $e');
-      // Optionally show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to load booking count')),
       );
@@ -93,7 +428,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    widget.name,  // Changed from 'name' to 'widget.name'
+                    widget.name,
                     style: const TextStyle(color: Colors.white, fontSize: 24),
                   ),
                   const Text(
@@ -112,19 +447,19 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
               leading: const Icon(Icons.account_circle),
               title: const Text('My Profile'),
               onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProviderProfileScreen(
-                  name: widget.name,    
-                  email: widget.email, 
-                  phone: widget.phone,  
-                  address: widget.address, 
-                   account: widget.account,
-                ),
-              ),
-            );
-          },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProviderProfileScreen(
+                      name: widget.name,    
+                      email: widget.email, 
+                      phone: widget.phone,  
+                      address: widget.address, 
+                      account: widget.account,
+                    ),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.book),
@@ -142,26 +477,26 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
               leading: const Icon(Icons.message),
               title: const Text('Messages'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChatListScreen(),
-              ),
-            );
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatListScreen(),
+                  ),
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.calendar_today),
               title: const Text('Calendar'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const CalendarScreen(userRole: 'service_provider', loggedInUser: ''),
                   ),
-                ); // Navigate to CalendarScreen
+                );
               },
             ),
             ListTile(
@@ -170,13 +505,13 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  BookingNotificationsScreen()),
+                  MaterialPageRoute(builder: (context) => BookingNotificationsScreen()),
                 );
               },
             ),
             ListTile(
               leading: const Icon(Icons.feedback),
-              title: const Text('View Feedback'), // New ListTile for Feedback
+              title: const Text('View Feedback'),
               onTap: () {
                 Navigator.push(
                   context,
@@ -186,15 +521,15 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.access_time),
-              title: const Text('Set Availability'), // New ListTile for Availability
+              title: const Text('Set Availability'),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AvailabilityScreen()), // Navigate to AvailabilityScreen
+                  MaterialPageRoute(builder: (context) => const AvailabilityScreen()),
                 );
               },
             ),
-            const Divider(), // Adds another separator before logout
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
@@ -206,16 +541,15 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                     content: const Text('Are you sure you want to logout?'),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context), // Close dialog
+                        onPressed: () => Navigator.pop(context),
                         child: const Text('Cancel'),
                       ),
                       TextButton(
                         onPressed: () async {
-                          // Clear any stored user data here
                           SharedPreferences prefs = await SharedPreferences.getInstance();
                           await prefs.clear();
-                          Navigator.pop(context); // Close dialog
-                          Navigator.pushReplacementNamed(context, '/'); // Navigate to login screen
+                          Navigator.pop(context);
+                          Navigator.pushReplacementNamed(context, '/');
                         },
                         child: const Text('Logout'),
                       ),
@@ -227,76 +561,95 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Hello, Service Provider',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Welcome back!',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            const SizedBox(height: 16),
-            GridView.count(
-              shrinkWrap: true,
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 16,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.1, 
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    final user = Provider.of<UserProvider>(context, listen: false);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TotalBookingScreen(
-                       userId: user.userId!, // Add ! to force non-nullable
-                       userRole: user.role!,
-                       authToken: user.token!,  // Pass the required authToken
-                    ),
+      body: RefreshIndicator(
+        onRefresh: _refreshAllData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Hello, Service Provider',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Welcome back!',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      final user = Provider.of<UserProvider>(context, listen: false);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TotalBookingScreen(
+                            userId: user.userId!,
+                            userRole: user.role!,
+                            authToken: user.token!,
+                          ),
+                        ),
+                      );
+                    },
+                    child: isLoading
+                        ? _buildLoadingCard()
+                        : _buildDashboardCard(bookingCount.toString(), 'Total Booking', Icons.calendar_today),
                   ),
-                );
-                  },
-                   child: isLoading
-                      ? _buildLoadingCard()
-                      : _buildDashboardCard(bookingCount.toString(), 'Total Booking', Icons.calendar_today),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => TotalServiceScreen(userRole: 'service_provider')),
-                    );
-                  },
-                  child: _buildDashboardCard('3', 'Total Service', Icons.list_alt),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => TotalEarningsScreen()),
-                    );
-                  },
-                  child: _buildDashboardCard('\$19,906.97', 'Total Earning', Icons.monetization_on),
-                ),
-                _buildDashboardCard('\$2,000.00', 'Wallet', Icons.account_balance_wallet),
-              ],
-            ),
-          ],
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => TotalServiceScreen(userRole: 'service_provider')),
+                      );
+                    },
+                    child: _buildDashboardCard('3', 'Total Service', Icons.list_alt),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => TotalEarningsScreen()),
+                      );
+                    },
+                    child: isLoadingEarnings
+                        ? _buildLoadingCard()
+                        : _buildDashboardCard(
+                            '\$${totalEarnings.toStringAsFixed(2)}',
+                            'Total Earning',
+                            Icons.monetization_on,
+                          ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      _showWalletDetails(context);
+                    },
+                    child: isLoadingWallet
+                        ? _buildLoadingCard()
+                        : _buildDashboardCard(
+                            '\$${balance.toStringAsFixed(2)}',
+                            'Wallet',
+                            Icons.account_balance_wallet,
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-     Widget _buildLoadingCard() {
+  Widget _buildLoadingCard() {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -331,11 +684,14 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: 17),
+              Icon(icon, color: Colors.white, size: 20),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 16, color: Colors.white),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

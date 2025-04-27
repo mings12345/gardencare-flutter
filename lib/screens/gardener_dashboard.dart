@@ -1,8 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/gardener_profile_screen.dart';
@@ -20,6 +25,7 @@ class GardenerDashboard extends StatefulWidget {
   final String phone;
   final String address;
   final String account;
+  
 
   GardenerDashboard({
     required this.name,
@@ -37,12 +43,355 @@ class GardenerDashboard extends StatefulWidget {
 class _GardenerDashboardState extends State<GardenerDashboard> {
   int bookingCount = 0;
   bool isLoading = true;
+  double balance = 0.0;
+  double totalEarnings = 0.0;
+List<dynamic> transactions = [];
+bool isLoadingWallet = false;
+ bool isLoadingEarnings = false; 
 
   @override
   void initState() {
     super.initState();
     _fetchBookingCount();
+    _loadWalletData(); 
+     _fetchTotalEarnings();
   }
+
+      Future<void> _fetchTotalEarnings() async {
+    setState(() => isLoadingEarnings = true);
+    try {
+      final bookingService = BookingService();
+      final earnings = await bookingService.fetchTotalEarnings();
+      setState(() {
+        totalEarnings = earnings;
+      });
+    } catch (e) {
+      print('Error fetching total earnings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load earnings data')),
+      );
+    } finally {
+      setState(() => isLoadingEarnings = false);
+    }
+  }
+
+    void _showWalletDetails(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) {
+      return Container(
+        padding: EdgeInsets.all(16),
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          children: [
+            Text(
+              'Wallet Balance',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '\$${balance.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _openCashInDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  child: const Text('Cash In'),
+                ),
+                ElevatedButton(
+                  onPressed: _openWithdrawDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                  ),
+                  child: const Text('Withdraw'),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadWalletData,
+                child: transactions.isEmpty
+                    ? Center(child: Text('No transactions yet'))
+                    : ListView.builder(
+                        itemCount: transactions.length,
+                        itemBuilder: (context, index) {
+                          final transaction = transactions[index];
+                          final amount = transaction['amount'] is double 
+                              ? transaction['amount'] as double
+                              : double.tryParse(transaction['amount'].toString()) ?? 0.0;
+                          
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 4),
+                            child: ListTile(
+                              leading: Icon(
+                                transaction['transaction_type'] == 'credit' 
+                                    ? Icons.arrow_circle_up 
+                                    : Icons.arrow_circle_down,
+                                color: transaction['transaction_type'] == 'credit' 
+                                    ? Colors.green 
+                                    : Colors.red,
+                              ),
+                              title: Text(transaction['description'] ?? 'No description'),
+                              subtitle: Text(transaction['created_at'] ?? ''),
+                              trailing: Text(
+                                '${transaction['transaction_type'] == 'credit' ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: transaction['transaction_type'] == 'credit' 
+                                      ? Colors.green 
+                                      : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+} 
+
+  void _openCashInDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      String amount = '';
+      String accountNumber = widget.account;
+
+      return AlertDialog(
+        title: const Text('Cash In'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              onChanged: (value) => amount = value,
+            ),
+            TextFormField(
+              initialValue: accountNumber,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Account Number'),
+              onChanged: (value) => accountNumber = value,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amount.isEmpty || accountNumber.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+
+              final token = await AuthService.getToken();
+              if (token == null) return;
+
+              try {
+                final String baseUrl = dotenv.get('BASE_URL');
+                final response = await http.post(
+                  Uri.parse('$baseUrl/api/wallet/cash-in'),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: json.encode({
+                    'amount': amount,
+                    'account_number': accountNumber,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  await _loadWalletData();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cash in successful')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${response.body}')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+  Future<void> _refreshAllData() async {
+  setState(() {
+    isLoading = true;
+    isLoadingWallet = true;
+     isLoadingEarnings = true;
+  });
+  
+  // Refresh all data sources
+    await Future.wait([
+      _fetchBookingCount(),
+      _loadWalletData(),
+      _fetchTotalEarnings(),
+    ]);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dashboard refreshed')),
+      );
+    }
+  
+  // Show a confirmation to the user
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Dashboard refreshed'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+}
+
+void _openWithdrawDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      String amount = '';
+      String accountNumber = widget.account;
+
+      return AlertDialog(
+        title: const Text('Withdraw'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              onChanged: (value) => amount = value,
+            ),
+            TextFormField(
+              initialValue: accountNumber,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Account Number'),
+              onChanged: (value) => accountNumber = value,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amount.isEmpty || accountNumber.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+
+              final token = await AuthService.getToken();
+              if (token == null) return;
+
+              try {
+                final String baseUrl = dotenv.get('BASE_URL');
+                final response = await http.post(
+                  Uri.parse('$baseUrl/api/wallet/withdraw'),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: json.encode({
+                    'amount': amount,
+                    'account_number': accountNumber,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  await _loadWalletData();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Withdrawal successful')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${response.body}')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+    Future<void> _loadWalletData() async {
+  setState(() => isLoadingWallet = true);
+  final token = await AuthService.getToken();
+  if (token == null) return;
+
+  try {
+    final String baseUrl = dotenv.get('BASE_URL');
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/wallet'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        balance = (data['balance'] as num?)?.toDouble() ?? 0.0;
+        transactions = List<Map<String, dynamic>>.from(data['transactions'] ?? []);
+      });
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error loading wallet: $e')),
+    );
+  } finally {
+    setState(() => isLoadingWallet = false);
+  }
+}
 
   Future<void> _fetchBookingCount() async {
     try {
@@ -229,7 +578,10 @@ class _GardenerDashboardState extends State<GardenerDashboard> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
+      body:  RefreshIndicator(
+      onRefresh: _refreshAllData,
+      child:SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(), 
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,20 +630,38 @@ class _GardenerDashboardState extends State<GardenerDashboard> {
                   },
                   child: _buildDashboardCard('3', 'Total Service', Icons.list_alt),
                 ),
-                GestureDetector(
+          GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => TotalEarningsScreen()),
                     );
                   },
-                  child: _buildDashboardCard('\$19,906.97', 'Total Earning', Icons.monetization_on),
+                  child: isLoadingEarnings
+                      ? _buildLoadingCard()
+                      : _buildDashboardCard(
+                          '\$${totalEarnings.toStringAsFixed(2)}',
+                          'Total Earning',
+                          Icons.monetization_on,
+                        ),
                 ),
-                _buildDashboardCard('\$2,000.00', 'Wallet', Icons.account_balance_wallet),
+                GestureDetector(
+                onTap: () {
+                  _showWalletDetails(context);
+                },
+                child: isLoadingWallet
+                    ? _buildLoadingCard()
+                    : _buildDashboardCard(
+                        '\$${balance.toStringAsFixed(2)}',
+                        'Wallet',
+                        Icons.account_balance_wallet,
+                      ),
+              ),
               ],
             ),
           ],
         ),
+      ),
       ),
     );
   }
