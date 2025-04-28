@@ -270,12 +270,15 @@ class _BookingsScreenState extends State<BookingsScreen> {
       children: [
         SizedBox(height: 10),
         ElevatedButton(
-          onPressed: () => _showRatingDialog(booking),
-          child: Text('Rate This Service'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-          ),
+        onPressed: () => _showRatingDialog(booking),
+        child: Text(
+          'Rate This Service',
+          style: TextStyle(color: Colors.white),
         ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+        ),
+      ),
       ],
     );
   }
@@ -571,7 +574,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
         title: Text(
           "My Bookings",
           style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w600, color: Colors.white,
           ),
         ),
         backgroundColor: Colors.green.shade700,

@@ -131,12 +131,12 @@ List<dynamic> transactions = [];
   }
 
     void _openCashInDialog() {
+  String amount = '';
+  String accountNumber = widget.account;
+
   showDialog(
     context: context,
     builder: (BuildContext context) {
-      String amount = '';
-      String accountNumber = widget.account;
-
       return AlertDialog(
         title: const Text('Cash In'),
         content: Column(
@@ -192,10 +192,8 @@ List<dynamic> transactions = [];
                     balance = data['new_balance']?.toDouble() ?? balance;
                   });
                   _loadWalletData(); // Refresh transactions
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cash in successful')),
-                  );
+                  Navigator.pop(context); // Close the cash-in dialog
+                  _showSuccessScreen(amount, 'cash-in');
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error: ${response.body}')),
@@ -215,13 +213,81 @@ List<dynamic> transactions = [];
   );
 }
 
+  // Add this new method for showing the success screen
+void _showSuccessScreen(String amount, String transactionType) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 80,
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                "Success!",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                transactionType == 'cash-in' 
+                  ? "₱$amount has been added to your wallet"
+                  : "₱$amount has been withdrawn from your wallet",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 5),
+              Text(
+                "New Balance: ₱${balance.toStringAsFixed(2)}",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  // Auto-dismiss the success screen after 3 seconds
+  Future.delayed(Duration(seconds: 3), () {
+    Navigator.of(context).pop();
+  });
+}
+
     void _openWithdrawDialog() {
+  String amount = '';
+  String accountNumber = widget.account;
+
   showDialog(
     context: context,
     builder: (BuildContext context) {
-      String amount = '';
-      String accountNumber = widget.account;
-
       return AlertDialog(
         title: const Text('Withdraw'),
         content: Column(
@@ -277,10 +343,8 @@ List<dynamic> transactions = [];
                     balance = data['new_balance']?.toDouble() ?? balance;
                   });
                   _loadWalletData(); // Refresh transactions
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Withdrawal successful')),
-                  );
+                  Navigator.pop(context); // Close the withdraw dialog
+                  _showSuccessScreen(amount, 'withdraw');
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error: ${response.body}')),

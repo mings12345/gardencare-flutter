@@ -199,167 +199,232 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
     );
   }
 
-  void _openCashInDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        String amount = '';
-        String accountNumber = widget.account;
+    void _openCashInDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      String amount = '';
+      String accountNumber = widget.account;
 
-        return AlertDialog(
-          title: const Text('Cash In'),
-          content: Column(
+      return AlertDialog(
+        title: const Text('Cash In'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              onChanged: (value) => amount = value,
+            ),
+            TextFormField(
+              initialValue: accountNumber,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Account Number'),
+              onChanged: (value) => accountNumber = value,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amount.isEmpty || accountNumber.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+
+              final token = await AuthService.getToken();
+              if (token == null) return;
+
+              try {
+                final String baseUrl = dotenv.get('BASE_URL');
+                final response = await http.post(
+                  Uri.parse('$baseUrl/api/wallet/cash-in'),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: json.encode({
+                    'amount': amount,
+                    'account_number': accountNumber,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  await _loadWalletData();
+                  Navigator.pop(context);
+                  _showSuccessScreen(amount, 'cash-in');
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${response.body}')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+  void _showSuccessScreen(String amount, String transactionType) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount'),
-                onChanged: (value) => amount = value,
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 80,
+                ),
               ),
-              TextFormField(
-                initialValue: accountNumber,
-                keyboardType: TextInputType.text,
-                decoration: const InputDecoration(labelText: 'Account Number'),
-                onChanged: (value) => accountNumber = value,
+              SizedBox(height: 20),
+              Text(
+                "Success!",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                transactionType == 'cash-in' 
+                  ? "\$${amount} has been added to your wallet"
+                  : "\$${amount} has been withdrawn from your wallet",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 5),
+              Text(
+                "New Balance: \$${balance.toStringAsFixed(2)}",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (amount.isEmpty || accountNumber.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all fields')),
-                  );
-                  return;
-                }
+        ),
+      );
+    },
+  );
 
-                final token = await AuthService.getToken();
-                if (token == null) return;
+  // Auto-dismiss the success screen after 3 seconds
+  Future.delayed(Duration(seconds: 3), () {
+    Navigator.of(context).pop();
+  });
+}
 
-                try {
-                  final String baseUrl = dotenv.get('BASE_URL');
-                  final response = await http.post(
-                    Uri.parse('$baseUrl/api/wallet/cash-in'),
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': 'Bearer $token',
-                    },
-                    body: json.encode({
-                      'amount': amount,
-                      'account_number': accountNumber,
-                    }),
-                  );
-
-                  if (response.statusCode == 200) {
-                    await _loadWalletData();
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Cash in successful')),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${response.body}')),
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              },
-              child: const Text('Confirm'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   void _openWithdrawDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        String amount = '';
-        String accountNumber = widget.account;
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      String amount = '';
+      String accountNumber = widget.account;
 
-        return AlertDialog(
-          title: const Text('Withdraw'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount'),
-                onChanged: (value) => amount = value,
-              ),
-              TextFormField(
-                initialValue: accountNumber,
-                keyboardType: TextInputType.text,
-                decoration: const InputDecoration(labelText: 'Account Number'),
-                onChanged: (value) => accountNumber = value,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+      return AlertDialog(
+        title: const Text('Withdraw'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              onChanged: (value) => amount = value,
             ),
-            ElevatedButton(
-              onPressed: () async {
-                if (amount.isEmpty || accountNumber.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all fields')),
-                  );
-                  return;
-                }
-
-                final token = await AuthService.getToken();
-                if (token == null) return;
-
-                try {
-                  final String baseUrl = dotenv.get('BASE_URL');
-                  final response = await http.post(
-                    Uri.parse('$baseUrl/api/wallet/withdraw'),
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': 'Bearer $token',
-                    },
-                    body: json.encode({
-                      'amount': amount,
-                      'account_number': accountNumber,
-                    }),
-                  );
-
-                  if (response.statusCode == 200) {
-                    await _loadWalletData();
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Withdrawal successful')),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${response.body}')),
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              },
-              child: const Text('Confirm'),
+            TextFormField(
+              initialValue: accountNumber,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Account Number'),
+              onChanged: (value) => accountNumber = value,
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amount.isEmpty || accountNumber.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+
+              final token = await AuthService.getToken();
+              if (token == null) return;
+
+              try {
+                final String baseUrl = dotenv.get('BASE_URL');
+                final response = await http.post(
+                  Uri.parse('$baseUrl/api/wallet/withdraw'),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: json.encode({
+                    'amount': amount,
+                    'account_number': accountNumber,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  await _loadWalletData();
+                  Navigator.pop(context);
+                  _showSuccessScreen(amount, 'withdraw');
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${response.body}')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   Future<void> _refreshAllData() async {
     setState(() {

@@ -31,6 +31,7 @@ class _BookingFormState extends State<BookingForm> {
   bool showAccountRegistration = false;
   bool isSendingOtp = false;
   bool isVerifyingOtp = false;
+  double walletBalance = 0.0;
 
   // Payment related variables
   String paymentType = "Full Payment"; // Default to full payment
@@ -52,6 +53,7 @@ class _BookingFormState extends State<BookingForm> {
   void initState() {
     super.initState();
     _loadData();
+     _fetchWalletBalance(); 
   }
 
   Future<void> _loadData() async {
@@ -63,6 +65,32 @@ class _BookingFormState extends State<BookingForm> {
     ]);
     setState(() => _isLoading = false);
   }
+
+    Future<void> _fetchWalletBalance() async {
+  try {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final prefs = await SharedPreferences.getInstance();
+    final baseUrl = dotenv.get('BASE_URL');
+    final token = prefs.getString('token') ?? '';
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/wallet'),
+      headers: {
+        "Accept": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        walletBalance = double.tryParse(data['balance'].toString()) ?? 0.0;
+      });
+    }
+  } catch (e) {
+    debugPrint("Error fetching wallet balance: $e");
+  }
+}
 
   Future<void> fetchGardeners() async {
     try {
@@ -172,6 +200,12 @@ class _BookingFormState extends State<BookingForm> {
     return;
   }
 
+     // Check wallet balance
+  if (walletBalance < downPaymentAmount) {
+    _showError("Insufficient wallet balance. Please cash in first.");
+    return;
+  }
+
   showDialog(
     context: context,
     builder: (BuildContext context) {
@@ -275,6 +309,160 @@ class _BookingFormState extends State<BookingForm> {
     },
   );
 }
+
+  void _showCashInDialog() {
+  String amount = '';
+  String accountNumber = Provider.of<UserProvider>(context, listen: false).account ?? '';
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Cash In'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+              onChanged: (value) => amount = value,
+            ),
+            TextFormField(
+              initialValue: accountNumber,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Account Number'),
+              onChanged: (value) => accountNumber = value,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (amount.isEmpty || accountNumber.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+
+              setState(() => _isLoading = true);
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                final baseUrl = dotenv.get('BASE_URL');
+                final token = prefs.getString('token') ?? '';
+
+                final response = await http.post(
+                  Uri.parse('$baseUrl/api/wallet/cash-in'),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: json.encode({
+                    'amount': amount,
+                    'account_number': accountNumber,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  final data = json.decode(response.body);
+                  setState(() {
+                    walletBalance = data['new_balance']?.toDouble() ?? walletBalance;
+                  });
+                  Navigator.pop(context); // Close the cash-in dialog
+                  
+                  // Show success screen overlay
+                  _showSuccessScreen(amount);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${response.body}')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              } finally {
+                setState(() => _isLoading = false);
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// Add this new method for showing the success screen
+void _showSuccessScreen(String amount) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 80,
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                "Success!",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                "₱$amount has been added to your wallet",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 5),
+              Text(
+                "New Balance: ₱${walletBalance.toStringAsFixed(2)}",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  // Auto-dismiss the success screen after 3 seconds
+  Future.delayed(Duration(seconds: 3), () {
+    Navigator.of(context).pop();
+  });
+}
+  
 void _showAccountRegistration() {
   showDialog(
     context: context,
@@ -593,6 +781,7 @@ Future<void> submitBooking() async {
         "amount_paid": downPaymentAmount,
         "payment_date": DateTime.now().toIso8601String(),
         "sender_no": userProvider.account,
+        "wallet_balance": walletBalance,
       }
     };
 
@@ -1011,45 +1200,77 @@ Widget _buildPaymentSection() {
   );
 }
  
-  Widget _buildSubmitButton() {
-    bool canProceed = true;
-    String buttonText = "PROCEED PAYMENT";
-    
-    // Additional validation for  payment
-    if (paymentMethod == "Garden Care" && paymentProofImage == null) {
-      canProceed = false;
-      buttonText = "PLEASE UPLOAD PAYMENT PROOF";
-    }
-    
+ Widget _buildSubmitButton() {
+  bool hasSufficientBalance = walletBalance >= downPaymentAmount;
+  bool hasAccount = Provider.of<UserProvider>(context, listen: false).account != null && 
+                    Provider.of<UserProvider>(context, listen: false).account!.isNotEmpty;
+
+  if (!hasAccount) {
     return ElevatedButton(
-      onPressed: ((_isLoading || isProcessingPayment || !canProceed) ? null : _showReceipt),
+      onPressed: _showReceipt,
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.green,
         padding: EdgeInsets.symmetric(vertical: 16),
       ),
-      child: (_isLoading || isProcessingPayment)
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  isProcessingPayment ? "PROCESSING PAYMENT..." : "CONFIRMING BOOKING...",
-                  style: TextStyle(fontSize: 16),
-                ),
-              ],
-            )
-          : Text(
-              buttonText,
-              style: TextStyle(fontSize: 16),
-            ),
+      child: Text(
+        "PROCEED PAYMENT",
+        style: TextStyle(fontSize: 16),
+      ),
     );
   }
+
+  if (!hasSufficientBalance) {
+    return Column(
+      children: [
+        Text(
+          "Insufficient wallet balance",
+          style: TextStyle(color: Colors.red, fontSize: 16),
+        ),
+        SizedBox(height: 10),
+        ElevatedButton(
+        onPressed: _showCashInDialog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange,
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16), 
+        ),
+        child: Text(
+          "CASH IN NOW",
+          style: TextStyle(fontSize: 14),
+        ),
+      ),
+      ],
+    );
+  }
+
+  return ElevatedButton(
+    onPressed: ((_isLoading || isProcessingPayment) ? null : _showReceipt),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.green,
+      padding: EdgeInsets.symmetric(vertical: 16),
+    ),
+    child: (_isLoading || isProcessingPayment)
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                isProcessingPayment ? "PROCESSING PAYMENT..." : "CONFIRMING BOOKING...",
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          )
+        : Text(
+            "PROCEED PAYMENT",
+            style: TextStyle(fontSize: 16),
+          ),
+  );
+}
 }
