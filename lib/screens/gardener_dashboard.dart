@@ -553,18 +553,39 @@ void _openWithdrawDialog() {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.book),
-              title: const Text('Booking History'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BookingHistoryScreen(userRole: 'gardener'),
-                  ),
-                );
-              },
+           ListTile(
+  leading: const Icon(Icons.book),
+  title: const Text('Booking History'),
+  onTap: () async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final userId = prefs.getInt('userId');
+      final userRole = prefs.getString('userRole');
+      
+      if (token == null || userId == null || userRole == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please login again')),
+        );
+        return;
+      }
+      
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingHistoryScreen(
+              userId: userId,
+              authToken: token,
             ),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    },
+  ),
             ListTile(
               leading: const Icon(Icons.message),
               title: const Text('Messages'),

@@ -9,6 +9,7 @@ import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class ProfileScreen extends StatefulWidget {
@@ -364,13 +365,36 @@ void _showSuccessScreen(String amount, String transactionType) {
   );
 }
 
-  void _viewBookingHistory() {
+  void _viewBookingHistory() async {
+  try {
+    // Get the required data from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final userId = prefs.getInt('userId');
+    final userRole = prefs.getString('userRole');
+    
+    if (token == null || userId == null || userRole == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session expired. Please login again')),
+      );
+      return;
+    }
+    
     Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (context) => const BookingHistoryScreen(userRole: 'homeowner')),
+        builder: (context) => BookingHistoryScreen(
+          userId: userId,
+          authToken: token,
+        ),
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
     );
   }
+}
 
   void _openCalendar() {
     Navigator.push(

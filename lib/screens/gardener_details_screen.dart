@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/models/user.dart';
+import 'package:gardencare_app/screens/chat_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GardenerDetailsScreen extends StatelessWidget {
   final User gardener;
@@ -118,11 +120,9 @@ class GardenerDetailsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () {
-                  // Implement contact functionality
-                },
+                onPressed: () => _navigateToChat(context),
                 child: const Text(
-                  'Contact Gardener',
+                  'Message Gardener',
                   style: TextStyle(fontSize: 18),
                 ),
               ),
@@ -131,6 +131,41 @@ class GardenerDetailsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Navigate to chat screen with the gardener
+  Future<void> _navigateToChat(BuildContext context) async {
+    try {
+      // Get current user details from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getInt('userId');
+      final authToken = prefs.getString('token');
+
+      // Check if we have the required auth data
+      if (currentUserId == null || authToken == null || authToken.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please login to message gardeners')),
+        );
+        return;
+      }
+
+      // Navigate to chat screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            currentUserId: currentUserId,
+            otherUserId: gardener.id,
+            userId: gardener.id, // The gardener's ID
+            authToken: authToken,
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error opening chat: ${e.toString()}')),
+      );
+    }
   }
 
   Widget _buildSectionHeader(String title) {

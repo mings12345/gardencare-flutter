@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gardencare_app/screens/bookings_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
@@ -251,7 +252,7 @@ class _BookingFormState extends State<BookingForm> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Payment Method:'),
-                  Text('Garden Care Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('GCare Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
               SizedBox(height: 5),
@@ -830,7 +831,10 @@ Future<void> submitBooking() async {
     );
 
     // Navigate to bookings screen
-    Navigator.pushNamed(context, '/bookings');
+   Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => BookingsScreen()),
+);
   }
 
   void _showError(String message) {
@@ -1139,7 +1143,7 @@ Widget _buildPaymentSection() {
             padding: const EdgeInsets.only(top: 8.0),
             child: TextFormField(
               readOnly: true,
-              initialValue: "Garden Care Wallet",
+              initialValue: "GCare Wallet",
               decoration: InputDecoration(
                 labelText: "Payment Method",
                 border: OutlineInputBorder(),

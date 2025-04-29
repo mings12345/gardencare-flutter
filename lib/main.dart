@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/gardener_dashboard.dart';
@@ -7,6 +6,7 @@ import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:gardencare_app/screens/onboarding_screen.dart';
 import 'package:gardencare_app/screens/profile_screen.dart';
+import 'package:gardencare_app/services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/screens/service_provider_screen.dart';
 import 'package:gardencare_app/screens/booking_form.dart';
@@ -15,18 +15,16 @@ import 'package:gardencare_app/screens/gardening_screen.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/landscaping_screen.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
-import 'package:gardencare_app/providers/seasonal_tips_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await NotificationService.initialize();
       await dotenv.load(fileName: ".env");
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => SeasonalTipsProvider()),
         ChangeNotifierProvider(create: (context) => BookingProvider()),
       ],
       child: MyApp(),

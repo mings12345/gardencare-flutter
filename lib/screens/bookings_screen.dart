@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/services/booking_service.dart';
 import 'package:gardencare_app/services/pusher_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -223,25 +222,54 @@ class _BookingsScreenState extends State<BookingsScreen> {
               }
 
               try {
-                // Call your API to submit the rating
+                // Show loading indicator
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 10),
+                        Text("Submitting rating..."),
+                      ],
+                    ),
+                    duration: Duration(seconds: 5),
+                  ),
+                );
+
+                // Submit rating
                 await _bookingService.submitRating(
                   bookingId: booking['id'],
                   rating: _rating,
                   feedback: _feedbackController.text,
                 );
 
+                // Update local state
+                setState(() {
+                  final index = _bookings.indexWhere((b) => b['id'] == booking['id']);
+                  if (index != -1) {
+                    _bookings[index] = {
+                      ..._bookings[index], // Keep existing data
+                      'rating': _rating,
+                      'feedback': _feedbackController.text,
+                    };
+                  }
+                });
+
+                // Close dialog and loading indicator
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+                // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Thank you for your feedback!')),
                 );
 
-                // Refresh bookings to update the UI
-                _fetchHomeownerBookings();
-                Navigator.of(context).pop();
               } catch (e) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Failed to submit rating: $e')),
                 );
-                  print('Rating submission error details: $e');
+                print('Rating submission error details: $e');
               }
             },
           ),
@@ -265,20 +293,20 @@ class _BookingsScreenState extends State<BookingsScreen> {
   }
   
     Widget _buildRatingSection(Map<String, dynamic> booking) {
-  if (booking['rating'] == null) {
+   if (booking['rating'] == null) {
     return Column(
       children: [
         SizedBox(height: 10),
         ElevatedButton(
-        onPressed: () => _showRatingDialog(booking),
-        child: Text(
-          'Rate This Service',
-          style: TextStyle(color: Colors.white),
+          onPressed: () => _showRatingDialog(booking),
+          child: Text(
+            'Rate This Service',
+            style: TextStyle(color: Colors.white),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+          ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
-        ),
-      ),
       ],
     );
   }
@@ -572,22 +600,14 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "My Bookings",
+          "My Appointments",
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600, color: Colors.white,
           ),
         ),
         backgroundColor: Colors.green.shade700,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => HomeownerScreen(name: '', email: '', address: '', phone: '', account: '',)),
-            );
-          },
-        ),
+        centerTitle: true, 
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -633,7 +653,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                           ),
                           SizedBox(height: 16),
                           Text(
-                            "No bookings found",
+                            "No Appointments found",
                             style: GoogleFonts.poppins(
                               fontSize: 18,
                               fontWeight: FontWeight.w500,
@@ -642,7 +662,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                           ),
                           SizedBox(height: 8),
                           Text(
-                            "Your booking history will appear here",
+                            "Your appointments will appear here",
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               color: Colors.grey.shade600,

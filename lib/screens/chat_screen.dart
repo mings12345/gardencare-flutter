@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http; // Add this import
-import 'dart:convert'; // Add this import for jsonEncode
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../services/pusher_service.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -9,12 +9,14 @@ class ChatScreen extends StatefulWidget {
   final int currentUserId;  // 👈 Your logged-in user
   final int otherUserId; 
   final String authToken;
+  final String? otherUserName; // Added parameter for the other user's name
 
   const ChatScreen({
     required this.userId,
     required this.authToken,
     required this.currentUserId,
     required this.otherUserId,
+    this.otherUserName, // Optional parameter for name
     Key? key,
   }) : super(key: key);
 
@@ -29,32 +31,38 @@ class ChatScreenState extends State<ChatScreen> {
   bool _hasError = false;
   late ScrollController _scrollController;
   final TextEditingController _messageController = TextEditingController();
+  String _otherUserName = ''; // Store the name here
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _initializeChat();
-     _markMessagesAsRead();
-  }
-    // Add this to your ChatScreen's initState
-    Future<void> _markMessagesAsRead() async {
-      try {
-        await http.post(
-          Uri.parse('${dotenv.get('BASE_URL')}/api/messages/mark-read'),
-          headers: {
-            'Authorization': 'Bearer ${widget.authToken}',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'sender_id': widget.otherUserId,
-            'receiver_id': widget.currentUserId,
-          }),
-        );
-      } catch (e) {
-        print('Error marking messages as read: $e');
-      }
+    // Initialize the name if provided
+    if (widget.otherUserName != null && widget.otherUserName!.isNotEmpty) {
+      _otherUserName = widget.otherUserName!;
     }
+    _initializeChat();
+    _markMessagesAsRead();
+  }
+
+  // Add this to your ChatScreen's initState
+  Future<void> _markMessagesAsRead() async {
+    try {
+      await http.post(
+        Uri.parse('${dotenv.get('BASE_URL')}/api/messages/mark-read'),
+        headers: {
+          'Authorization': 'Bearer ${widget.authToken}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'sender_id': widget.otherUserId,
+          'receiver_id': widget.currentUserId,
+        }),
+      );
+    } catch (e) {
+      print('Error marking messages as read: $e');
+    }
+  }
 
   Future<void> _initializeChat() async {
     try {
@@ -62,10 +70,21 @@ class ChatScreenState extends State<ChatScreen> {
       
       _pusherService = PusherService(
         authToken: widget.authToken,
-        currentUserId: widget.currentUserId.toString(), // Pass the required argument
+        currentUserId: widget.currentUserId.toString(),
         onMessagesFetched: (messages) {
           print('Messages fetched: $messages');
           final safeMessages = messages.map((message) {
+            // If we don't have the name yet, try to get it from the messages
+            if (_otherUserName.isEmpty && 
+                message['sender_id'] == widget.otherUserId &&
+                message['sender']['name'] != null) {
+              _otherUserName = message['sender']['name'];
+            } else if (_otherUserName.isEmpty && 
+                message['receiver_id'] == widget.otherUserId &&
+                message['receiver']['name'] != null) {
+              _otherUserName = message['receiver']['name'];
+            }
+            
             return {
               'id': message['id'],
               'sender_id': message['sender_id'],
@@ -105,8 +124,10 @@ class ChatScreenState extends State<ChatScreen> {
       );
 
       await _pusherService.initPusher(widget.currentUserId.toString());
-      await _pusherService.fetchMessages( widget.currentUserId.toString(), 
-      widget.otherUserId.toString(), );
+      await _pusherService.fetchMessages(
+        widget.currentUserId.toString(), 
+        widget.otherUserId.toString(),
+      );
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -131,27 +152,27 @@ class ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _sendMessage() async {
-  if (_messageController.text.trim().isEmpty) return;
+    if (_messageController.text.trim().isEmpty) return;
 
-  final message = _messageController.text;
-  _messageController.clear();
+    final message = _messageController.text;
+    _messageController.clear();
 
-  try {
-    await _pusherService.sendMessage(
-      widget.otherUserId.toString(),
-      message,
-    );
-    // Optional: Refresh messages after sending
-    await _pusherService.fetchMessages(
-      widget.currentUserId.toString(),
-      widget.otherUserId.toString(),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to send message: ${e.toString()}')),
-    );
+    try {
+      await _pusherService.sendMessage(
+        widget.otherUserId.toString(),
+        message,
+      );
+      // Optional: Refresh messages after sending
+      await _pusherService.fetchMessages(
+        widget.currentUserId.toString(),
+        widget.otherUserId.toString(),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send message: ${e.toString()}')),
+      );
+    }
   }
-}
 
   @override
   void dispose() {
@@ -163,16 +184,23 @@ class ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Create the app bar title based on available information
+    final String appBarTitle = _otherUserName.isNotEmpty 
+        ? 'Chat with $_otherUserName' 
+        : 'Chat';
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Text(appBarTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
               setState(() => _isLoading = true);
-              _pusherService.fetchMessages( widget.currentUserId.toString(), 
-        widget.otherUserId.toString(), );
+              _pusherService.fetchMessages(
+                widget.currentUserId.toString(), 
+                widget.otherUserId.toString(),
+              );
             },
           ),
         ],

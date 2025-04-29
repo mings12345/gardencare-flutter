@@ -447,7 +447,13 @@ void _showError(String message) {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Booking Notifications"),
+        title: Text(
+          "Booking Notifications",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: Colors.green,
       ),
       body: _bookingNotifications.isEmpty

@@ -205,24 +205,46 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
     builder: (BuildContext context) {
       String amount = '';
       String accountNumber = widget.account;
+      final _formKey = GlobalKey<FormState>();
 
       return AlertDialog(
         title: const Text('Cash In'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Amount'),
-              onChanged: (value) => amount = value,
-            ),
-            TextFormField(
-              initialValue: accountNumber,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(labelText: 'Account Number'),
-              onChanged: (value) => accountNumber = value,
-            ),
-          ],
+        content: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount'),
+                onChanged: (value) => amount = value,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter an amount';
+                  }
+                  return null;
+                },
+              ),
+              TextFormField(
+                initialValue: accountNumber,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Account Number'),
+                onChanged: (value) => accountNumber = value,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter an account number';
+                  }
+                  if (value.length != 11 || !value.startsWith('09')) {
+                    return 'Account number must be 11 digits';
+                  }
+                  if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                    return 'Account number must contain only digits';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -231,43 +253,38 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (amount.isEmpty || accountNumber.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please fill all fields')),
-                );
-                return;
-              }
+              if (_formKey.currentState?.validate() ?? false) {
+                final token = await AuthService.getToken();
+                if (token == null) return;
 
-              final token = await AuthService.getToken();
-              if (token == null) return;
+                try {
+                  final String baseUrl = dotenv.get('BASE_URL');
+                  final response = await http.post(
+                    Uri.parse('$baseUrl/api/wallet/cash-in'),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: json.encode({
+                      'amount': amount,
+                      'account_number': accountNumber,
+                    }),
+                  );
 
-              try {
-                final String baseUrl = dotenv.get('BASE_URL');
-                final response = await http.post(
-                  Uri.parse('$baseUrl/api/wallet/cash-in'),
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer $token',
-                  },
-                  body: json.encode({
-                    'amount': amount,
-                    'account_number': accountNumber,
-                  }),
-                );
-
-                if (response.statusCode == 200) {
-                  await _loadWalletData();
-                  Navigator.pop(context);
-                  _showSuccessScreen(amount, 'cash-in');
-                } else {
+                  if (response.statusCode == 200) {
+                    await _loadWalletData();
+                    Navigator.pop(context);
+                    _showSuccessScreen(amount, 'cash-in');
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${response.body}')),
+                    );
+                  }
+                } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: ${response.body}')),
+                    SnackBar(content: Text('Error: $e')),
                   );
                 }
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: $e')),
-                );
               }
             },
             child: const Text('Confirm'),
@@ -527,17 +544,25 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.book),
-              title: const Text('Booking History'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BookingHistoryScreen(userRole: 'service_provider'),
+            leading: const Icon(Icons.book),
+            title: const Text('Booking History'),
+            onTap: () async {
+              // Get the user ID and auth token from your state management or SharedPreferences
+              final prefs = await SharedPreferences.getInstance();
+              final userId = prefs.getInt('userId') ?? 0;
+              final authToken = prefs.getString('authToken') ?? '';
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BookingHistoryScreen(
+                    userId: userId,
+                    authToken: authToken,
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
+          ),
             ListTile(
               leading: const Icon(Icons.message),
               title: const Text('Messages'),

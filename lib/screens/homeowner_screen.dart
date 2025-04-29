@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/screens/bookings_screen.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
-import 'package:gardencare_app/screens/seasonal_tips_screen.dart';
+import 'package:gardencare_app/screens/plant_care_screen.dart';
 import 'package:gardencare_app/screens/service_details_screen.dart';
 import 'package:gardencare_app/screens/landscaping_service_details.dart';
 import 'package:gardencare_app/screens/landscaping_screen.dart';
@@ -92,7 +92,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           ),
           SalomonBottomBarItem(
             icon: const Icon(Icons.bookmark),
-            title: const Text('Bookings'),
+            title: const Text('Appointments'),
             selectedColor: Colors.green,
           ),
           SalomonBottomBarItem(
@@ -132,50 +132,16 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           ),
         ),
       ),
-      const SizedBox(height: 32),
-
-      // Seasonal Tips Section
-      const Text(
-        'Seasonal Tips',
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
       const SizedBox(height: 16),
-      GestureDetector(
-        onTap: () {
+      ElevatedButton(
+        child: Text("View Plant Care Tips"),
+        onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => SeasonalTipsScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => PlantCareScreen()),
           );
         },
-        child: Card(
-          color: Colors.green.shade100,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Icon(Icons.eco, color: Colors.green, size: 40),
-                const SizedBox(width: 16),
-                Text(
-                  'View Seasonal Tips',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Spacer(),
-                Icon(Icons.arrow_forward, color: Colors.green),
-              ],
-            ),
-          ),
-        ),
       ),
-      const SizedBox(height: 32),
-
       // Gardening Services Section
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
