@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
+import 'package:gardencare_app/screens/earnigs_summary_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -16,7 +17,6 @@ import 'calendar_screen.dart';
 import 'chat_list_screen.dart';
 import 'total_booking.dart';
 import 'total_service_screen.dart';
-import 'total_earnings.dart';
 
 class GardenerDashboard extends StatefulWidget { 
   final String name;
@@ -94,7 +94,7 @@ bool isLoadingWallet = false;
             ),
             SizedBox(height: 8),
             Text(
-              '\$${balance.toStringAsFixed(2)}',
+              '₱${balance.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -122,6 +122,16 @@ bool isLoadingWallet = false;
               ],
             ),
             SizedBox(height: 16),
+            const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            'Transaction History',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _loadWalletData,
@@ -149,7 +159,7 @@ bool isLoadingWallet = false;
                               title: Text(transaction['description'] ?? 'No description'),
                               subtitle: Text(transaction['created_at'] ?? ''),
                               trailing: Text(
-                                '${transaction['transaction_type'] == 'credit' ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
+                                '${transaction['transaction_type'] == 'credit' ? '+' : '-'}₱${amount.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   color: transaction['transaction_type'] == 'credit' 
                                       ? Colors.green 
@@ -292,14 +302,14 @@ void _showSuccessScreen(String amount, String transactionType) {
               SizedBox(height: 10),
               Text(
                 transactionType == 'cash-in' 
-                  ? "\$${amount} has been added to your wallet"
-                  : "\$${amount} has been withdrawn from your wallet",
+                  ? "₱${amount} has been added to your wallet"
+                  : "₱${amount} has been withdrawn from your wallet",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
               ),
               SizedBox(height: 5),
               Text(
-                "New Balance: \$${balance.toStringAsFixed(2)}",
+                "New Balance: ₱${balance.toStringAsFixed(2)}",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -718,16 +728,18 @@ void _openWithdrawDialog() {
                   child: _buildDashboardCard('3', 'Total Service', Icons.list_alt),
                 ),
           GestureDetector(
-                  onTap: () {
+                                    onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => TotalEarningsScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => EarningsSummaryScreen(),
+                      ),
                     );
                   },
                   child: isLoadingEarnings
                       ? _buildLoadingCard()
                       : _buildDashboardCard(
-                          '\$${totalEarnings.toStringAsFixed(2)}',
+                          '₱${totalEarnings.toStringAsFixed(2)}',
                           'Total Earning',
                           Icons.monetization_on,
                         ),
@@ -739,7 +751,7 @@ void _openWithdrawDialog() {
                 child: isLoadingWallet
                     ? _buildLoadingCard()
                     : _buildDashboardCard(
-                        '\$${balance.toStringAsFixed(2)}',
+                        '₱${balance.toStringAsFixed(2)}',
                         'Wallet',
                         Icons.account_balance_wallet,
                       ),

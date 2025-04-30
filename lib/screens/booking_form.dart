@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/screens/bookings_screen.dart';
+import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
@@ -470,7 +471,7 @@ void _showAccountRegistration() {
     barrierDismissible: false,
     builder: (BuildContext context) {
       return StatefulBuilder(
-        builder: (context, setState) {
+        builder: (context, setDialogState) {  // Renamed to make clear it's for dialog state
           return AlertDialog(
             title: Stack(
               children: [
@@ -540,9 +541,9 @@ void _showAccountRegistration() {
                     ),
                     SizedBox(height: 10),
                     TextButton(
-                      onPressed: () {
-                        _resendOtp();
-                        setState(() {}); // Refresh the dialog
+                      onPressed: () async {
+                        await _resendOtp();
+                        setDialogState(() {}); // Refresh dialog with updated state
                       },
                       child: Text("Resend OTP"),
                     ),
@@ -579,9 +580,10 @@ void _showAccountRegistration() {
                 onPressed: () async {
                   if (otp == null) {
                     await _sendOtp();
-                    setState(() {}); // Refresh the dialog to show OTP field
+                    setDialogState(() {}); // Use dialog's setState
                   } else {
                     await _verifyOtp();
+                    setDialogState(() {}); // Update button state in dialog
                   }
                 },
               ),
@@ -644,6 +646,7 @@ Future<void> _resendOtp() async {
   
   await Future.delayed(Duration(seconds: 1));
   
+  // Important: Reset the sending state
   setState(() => isSendingOtp = false);
   
   ScaffoldMessenger.of(context).showSnackBar(
@@ -708,16 +711,51 @@ Future<void> _verifyOtp() async {
         showAccountRegistration = false;
       });
       
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Account number verified successfully!"),
-          backgroundColor: Colors.green,
-        ),
+      // Show success dialog that auto-closes after 2 seconds
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          // Auto-close after 2 seconds
+          Future.delayed(const Duration(seconds: 2), () {
+            Navigator.of(context).pop();
+            _showReceipt();
+          });
+          
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 60),
+                  SizedBox(height: 16),
+                  Text(
+                    "Verified Successfully!",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "Your account number has been verified.",
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 16),
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation(Colors.green),
+                    strokeWidth: 2,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       );
-      
-      // Now show the receipt
-      _showReceipt();
     } else {
       print(response.body);
       _showError("Failed to save Account number: ${response.body}");
@@ -819,23 +857,36 @@ Future<void> submitBooking() async {
 }
 
   void _handleSuccessfulBooking(Map<String, dynamic> bookingData) {
-    // Update local state
-    Provider.of<BookingProvider>(context, listen: false).addBooking(bookingData);
-    
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Booking and Payment Successful!"),
-        backgroundColor: Colors.green,
-      ),
-    );
+  // Update local state
+  Provider.of<BookingProvider>(context, listen: false).addBooking(bookingData);
+  
+  // Show success message
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text("Booking and Payment Successful!"),
+      backgroundColor: Colors.green,
+    ),
+  );
 
-    // Navigate to bookings screen
-   Navigator.push(
-  context,
-  MaterialPageRoute(builder: (context) => BookingsScreen()),
-);
-  }
+  // Navigate to bookings screen and remove all previous routes
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (context) => HomeownerScreen(
+      name: '', // Pass your actual user data here
+      email: '',
+      address: '',
+      phone: '',
+      account: '',
+    )),
+    (route) => false,
+  );
+  
+  // Then navigate to bookings screen
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => BookingsScreen()),
+  );
+}
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1191,7 +1242,7 @@ Widget _buildPaymentSection() {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    "Note: Remaining balance will be collected on service day.",
+                    "Note: Remaining balance will be automatically deducted to your account after completion.",
                     style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                   ),
                 ],

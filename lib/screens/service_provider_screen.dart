@@ -6,6 +6,7 @@ import 'package:gardencare_app/screens/availability_screen.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
+import 'package:gardencare_app/screens/earnigs_summary_screen.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/provider_profile_screen.dart';
@@ -14,7 +15,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/total_booking.dart';
 import 'package:gardencare_app/screens/total_service_screen.dart';
-import 'package:gardencare_app/screens/total_earnings.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -123,7 +123,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                '\$${balance.toStringAsFixed(2)}',
+                '₱${balance.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -178,7 +178,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                                 title: Text(transaction['description'] ?? 'No description'),
                                 subtitle: Text(transaction['created_at'] ?? ''),
                                 trailing: Text(
-                                  '${transaction['transaction_type'] == 'credit' ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
+                                  '${transaction['transaction_type'] == 'credit' ? '+' : '-'}₱${amount.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     color: transaction['transaction_type'] == 'credit' 
                                         ? Colors.green 
@@ -336,14 +336,14 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
               SizedBox(height: 10),
               Text(
                 transactionType == 'cash-in' 
-                  ? "\$${amount} has been added to your wallet"
-                  : "\$${amount} has been withdrawn from your wallet",
+                  ? "₱${amount} has been added to your wallet"
+                  : "₱${amount} has been withdrawn from your wallet",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
               ),
               SizedBox(height: 5),
               Text(
-                "New Balance: \$${balance.toStringAsFixed(2)}",
+                "New Balance: ₱${balance.toStringAsFixed(2)}",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -704,16 +704,18 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                     child: _buildDashboardCard('3', 'Total Service', Icons.list_alt),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => TotalEarningsScreen()),
-                      );
-                    },
+                     onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EarningsSummaryScreen(),
+                      ),
+                    );
+                  },
                     child: isLoadingEarnings
                         ? _buildLoadingCard()
                         : _buildDashboardCard(
-                            '\$${totalEarnings.toStringAsFixed(2)}',
+                            '₱${totalEarnings.toStringAsFixed(2)}',
                             'Total Earning',
                             Icons.monetization_on,
                           ),
@@ -725,7 +727,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                     child: isLoadingWallet
                         ? _buildLoadingCard()
                         : _buildDashboardCard(
-                            '\$${balance.toStringAsFixed(2)}',
+                            '₱${balance.toStringAsFixed(2)}',
                             'Wallet',
                             Icons.account_balance_wallet,
                           ),

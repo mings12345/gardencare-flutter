@@ -599,10 +599,12 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+         automaticallyImplyLeading: false, 
         title: Text(
           "My Appointments",
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600, color: Colors.white,
+            
           ),
         ),
         backgroundColor: Colors.green.shade700,

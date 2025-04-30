@@ -544,7 +544,7 @@ void _showSuccessScreen(String amount, String transactionType) {
               ),
             ),
             Text(
-              '\$${balance.toStringAsFixed(2)}',
+              '₱${balance.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -611,7 +611,7 @@ void _showSuccessScreen(String amount, String transactionType) {
         title: Text(transaction['description'] ?? 'No description'),
         subtitle: Text(transaction['created_at'] ?? ''),
         trailing: Text(
-          '${transaction['transaction_type'] == 'credit' ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
+          '${transaction['transaction_type'] == 'credit' ? '+' : '-'}₱${amount.toStringAsFixed(2)}',
           style: TextStyle(
             color: transaction['transaction_type'] == 'credit' 
                 ? Colors.green 

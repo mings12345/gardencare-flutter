@@ -20,30 +20,45 @@ class BookingHistoryScreen extends StatefulWidget {
 
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   late Future<Map<String, dynamic>> _bookingsFuture;
+    late String _currentAuthToken;
 
   @override
   void initState() {
     super.initState();
+     _currentAuthToken = widget.authToken; 
     _bookingsFuture = _fetchAllBookings();
   }
 
-  Future<Map<String, dynamic>> _fetchAllBookings() async {
-    final url = Uri.parse('${dotenv.get('BASE_URL')}/api/bookings/all/${widget.userId}');
-    
-    print('Calling URL: ${url.toString()}');
-    // Safely print token info for debugging
-    print('Auth Token ${widget.authToken.isEmpty ? 'is empty' : 'exists'}: ${widget.authToken.isNotEmpty ? widget.authToken.length : 0} characters');
-    
-    // Check token before making request
-    if (widget.authToken.isEmpty) {
-      print('WARNING: Auth token is empty! Authentication will fail.');
+   Future<Map<String, dynamic>> _fetchAllBookings() async {
+    // First check if we have a valid token
+    if (_currentAuthToken.isEmpty) {
+      // Try to get the token again if it's empty
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null || token.isEmpty) {
+        // If still no token, navigate to login
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacementNamed(context, '/login');
+        });
+        throw Exception('Authentication required');
+      } else {
+        // If we got a token, update our local copy
+        setState(() {
+          _currentAuthToken = token;
+        });
+        // Retry the request with the new token
+        return _fetchAllBookings();
+      }
     }
+
+    final url = Uri.parse('${dotenv.get('BASE_URL')}/api/bookings/all/${widget.userId}');
     
     try {
       final response = await http.get(
         url,
         headers: {
-          'Authorization': 'Bearer ${widget.authToken}',
+          'Authorization': 'Bearer $_currentAuthToken',
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
@@ -51,12 +66,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       
       if (response.statusCode == 200) {
         return json.decode(response.body);
+      } else if (response.statusCode == 401) {
+        // Token might be expired, try to refresh it or logout
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacementNamed(context, '/login');
+        });
+        throw Exception('Session expired. Please login again');
       } else {
-        print('Failed with status ${response.statusCode}, body: ${response.body}');
         throw Exception('Failed to load bookings: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Network or parsing error: $e');
       throw Exception('Connection error: $e');
     }
   }

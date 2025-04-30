@@ -47,15 +47,16 @@ class AuthService {
 
         return user;
       } else if (response.headers['content-type']?.contains('application/json') == true) {
-        final error = jsonDecode(response.body);
-        print('Login Error Response: $error');  // Debugging line
-        throw Exception('Login failed: ${error['message']}');
-      } else {
+      final error = jsonDecode(response.body);
+      print('Login Error Response: $error');  // Debugging line
+      // Check if the error message is in 'error' or 'message' field
+      final errorMessage = error['message'] ?? error['error'] ?? 'Invalid credentials';
+      throw Exception('Login failed: $errorMessage');
+    } else {
         print('Unexpected error: ${response.body}');  // Debugging line
         throw Exception('Unexpected error: ${response.statusCode}');
       }
     } catch (e) {
-      print('Login Exception: $e');  // Debugging line
       rethrow;
     }
   } 

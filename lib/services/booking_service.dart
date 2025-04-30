@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gardencare_app/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -60,6 +61,26 @@ class BookingService {
     throw e;
   }
 }
+
+  Future<Map<String, dynamic>> fetchEarningsSummary() async {
+    final token = await AuthService.getToken();
+    if (token == null) {
+      throw Exception('Authentication token not found');
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/earnings/summary'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load earnings summary');
+    }
+  }
 
   Future<void> submitRating({
   required int bookingId,

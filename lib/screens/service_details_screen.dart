@@ -57,15 +57,47 @@ class ServiceDetailsScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipRRect(
+                child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  serviceImage,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
+                child: serviceImage.isNotEmpty
+                    ? Image.network(
+                        serviceImage,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.image_not_supported, size: 40),
+                                  SizedBox(height: 8),
+                                  Text('Image not available',
+                                      style: TextStyle(color: Colors.grey[600])),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.image, size: 40, color: Colors.grey[400]),
+                              SizedBox(height: 8),
+                              Text('No Image',
+                                  style: TextStyle(color: Colors.grey[600])),
+                            ],
+                          ),
+                        ),
+                      ),
               ),
             ),
+            
             const SizedBox(height: 24),
 
             // Service Name with decorative underline

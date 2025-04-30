@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/screens/bookings_screen.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
 import 'package:gardencare_app/screens/plant_care_screen.dart';
 import 'package:gardencare_app/screens/service_details_screen.dart';
-import 'package:gardencare_app/screens/landscaping_service_details.dart';
 import 'package:gardencare_app/screens/landscaping_screen.dart';
 import 'package:gardencare_app/screens/profile_screen.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../widgets/banner_widget.dart';
 import './gardening_screen.dart';
 
@@ -32,11 +34,54 @@ class HomeownerScreen extends StatefulWidget {
 class _HomeownerScreenState extends State<HomeownerScreen> {
   int _selectedIndex = 0;
   late PageController _pageController;
+  List<dynamic> gardeningServices = [];
+  List<dynamic> landscapingServices = [];
+  bool isLoading = true;
+  String errorMessage = '';
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _fetchServices();
+  }
+
+  Future<void> _fetchServices() async {
+    try {
+      final String baseUrl = dotenv.get('BASE_URL');
+      
+      // Fetch gardening services
+      final gardeningResponse = await http.get(
+        Uri.parse('$baseUrl/api/services/gardening'),
+      );
+      
+      // Fetch landscaping services
+      final landscapingResponse = await http.get(
+        Uri.parse('$baseUrl/api/services/landscaping'),
+      );
+
+      if (gardeningResponse.statusCode == 200 && landscapingResponse.statusCode == 200) {
+        final gardeningData = json.decode(gardeningResponse.body);
+        final landscapingData = json.decode(landscapingResponse.body);
+        
+        setState(() {
+          gardeningServices = gardeningData['services'].take(4).toList(); // Get first 4 services
+          landscapingServices = landscapingData['services'].take(4).toList(); // Get first 4 services
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load services. Please try again.';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'An error occurred: ${e.toString()}';
+        isLoading = false;
+      });
+      print('Error fetching services: ${e.toString()}');
+    }
   }
 
   @override
@@ -59,6 +104,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           ? AppBar(
               title: const Text("Welcome to GardenCare"),
               backgroundColor: Colors.green,
+               automaticallyImplyLeading: false, 
             )
           : null,
       body: PageView(
@@ -69,17 +115,17 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           });
         },
         children: [
-  _buildHomePage(),
-  BookingsScreen(),
-  ChatListScreen(),
-  ProfileScreen(
-    name: widget.name,
-    email: widget.email,
-    address: widget.address,
-    phone: widget.phone,
-    account: widget.account,
-  ),
-],
+          _buildHomePage(),
+          BookingsScreen(),
+          ChatListScreen(),
+          ProfileScreen(
+            name: widget.name,
+            email: widget.email,
+            address: widget.address,
+            phone: widget.phone,
+            account: widget.account,
+          ),
+        ],
       ),
       bottomNavigationBar: SalomonBottomBar(
         currentIndex: _selectedIndex,
@@ -111,223 +157,292 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
   }
 
   Widget _buildHomePage() {
-  return ListView(
-    padding: const EdgeInsets.all(16.0),
-    children: [
-      BannerWidget(),
-      const SizedBox(height: 18),
-      Image.asset(
-        'assets/images/gardening.jpg',
-        height: 250,
-        fit: BoxFit.cover,
-      ),
-      const SizedBox(height: 16),
-      const Center(
-        child: Text(
-          "Book a Service",
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (errorMessage.isNotEmpty) {
+      return Center(child: Text(errorMessage));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        BannerWidget(),
+        const SizedBox(height: 18),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            'assets/images/gardening.jpg',
+            height: 250,
+            width: double.infinity,
+            fit: BoxFit.cover,
           ),
         ),
-      ),
-      const SizedBox(height: 16),
-      ElevatedButton(
-        child: Text("View Plant Care Tips"),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PlantCareScreen()),
-          );
-        },
-      ),
-      // Gardening Services Section
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Gardening Services',
+        const SizedBox(height: 16),
+        const Center(
+          child: Text(
+            "Book a Service",
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
+              color: Colors.black,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => GardeningScreen()));
-            },
-            child: const Text(
-              'View All',
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Text("View Plant Care Tips"),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => PlantCareScreen()),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+
+        // Gardening Services Section
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Gardening Services',
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.green,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        mainAxisSpacing: 16.0,
-        crossAxisSpacing: 16.0,
-        childAspectRatio: 1.2,
-        children: [
-          _buildGardeningServiceCard(
-            context,
-            icon: Icons.spa,
-            title: "Plant Care",
-            description: "A service for caring for plants.",
-            image: 'assets/images/plant care.jpg',
-            price: '₱500',
-          ),
-          _buildGardeningServiceCard(
-            context,
-            icon: Icons.water_drop,
-            title: "Watering",
-            description: "Regular watering of your plants.",
-            image: 'assets/images/watering.jpg',
-            price: '₱300',
-          ),
-          _buildGardeningServiceCard(
-            context,
-            icon: Icons.pest_control,
-            title: "Pest Control",
-            description: "Protection against garden pests.",
-            image: 'assets/images/pest control.jpg',
-            price: '₱700',
-          ),
-          _buildGardeningServiceCard(
-            context,
-            icon: Icons.grass,
-            title: "Lawn Mowing",
-            description: "Keep your lawn neatly trimmed.",
-            image: 'assets/images/lawn mowing.jpg',
-            price: '₱400',
-          ),
-        ],
-      ),
-
-      const SizedBox(height: 32),
-
-      // Landscaping Services Section
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Landscaping Services',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => LandscapingScreen()));
-            },
-            child: const Text(
-              'View All',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.green,
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => GardeningScreen())
+                );
+              },
+              child: const Text(
+                'View All',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.green,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        mainAxisSpacing: 16.0,
-        crossAxisSpacing: 16.0,
-        childAspectRatio: 1.2,
-        children: [
-          _buildLandscapingServiceCard(
-            context,
-            icon: Icons.landscape,
-            title: "Garden Design",
-            description: "A service for designing beautiful and functional gardens.",
-            image: 'assets/images/garden design.jpg',
-            price: '₱4500',
-          ),
-          _buildLandscapingServiceCard(
-            context,
-            icon: Icons.park,
-            title: "Pathway Construction",
-            description: "Create beautiful and durable pathways in your garden.",
-            image: 'assets/images/pathway.jpg',
-            price: '₱5000',
-          ),
-          _buildLandscapingServiceCard(
-            context,
-            icon: Icons.foundation,
-            title: "Fencing",
-            description: "Install fences for privacy, security, or aesthetic purposes.",
-            image: 'assets/images/fencing.jpg',
-            price: '₱4000',
-          ),
-          _buildLandscapingServiceCard(
-            context,
-            icon: Icons.bento,
-            title: "Outdoor Furniture",
-            description: "Beautiful and comfortable outdoor furniture solutions.",
-            image: 'assets/images/outdoor.jpg',
-            price: '₱5100',
-          ),
-        ],
-      ),
-    ],
-  );
-}
+          ],
+        ),
+        const SizedBox(height: 16),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: 16.0,
+          crossAxisSpacing: 16.0,
+          childAspectRatio: 1.2,
+          children: gardeningServices.map((service) {
+            return _buildServiceCard(
+              context,
+              icon: _getServiceIcon(service['name']),
+              title: service['name'],
+              description: service['description'] ?? '',
+              image: service['image'] ?? '',
+              price: '₱${service['price']}',
+              isGardening: true,
+            );
+          }).toList(),
+        ),
 
-  Widget _buildGardeningServiceCard(
+        const SizedBox(height: 32),
+
+        // Landscaping Services Section
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Landscaping Services',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => LandscapingScreen())
+                );
+              },
+              child: const Text(
+                'View All',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.green,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: 16.0,
+          crossAxisSpacing: 16.0,
+          childAspectRatio: 1.2,
+          children: landscapingServices.map((service) {
+            return _buildServiceCard(
+              context,
+              icon: _getServiceIcon(service['name']),
+              title: service['name'],
+              description: service['description'] ?? '',
+              image: service['image'] ?? '',
+              price: '₱${service['price']}',
+              isGardening: false,
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  IconData _getServiceIcon(String serviceName) {
+    // Map service names to appropriate icons
+    if (serviceName.toLowerCase().contains('plant')) return Icons.spa;
+    if (serviceName.toLowerCase().contains('water')) return Icons.water_drop;
+    if (serviceName.toLowerCase().contains('pest')) return Icons.pest_control;
+    if (serviceName.toLowerCase().contains('lawn')) return Icons.grass;
+    if (serviceName.toLowerCase().contains('design')) return Icons.landscape;
+    if (serviceName.toLowerCase().contains('path')) return Icons.park;
+    if (serviceName.toLowerCase().contains('fence')) return Icons.foundation;
+    if (serviceName.toLowerCase().contains('furniture')) return Icons.bento;
+    return Icons.eco; // default icon
+  }
+
+  Widget _buildServiceCard(
     BuildContext context, {
     required IconData icon,
     required String title,
     required String description,
     required String image,
     required String price,
+    required bool isGardening,
   }) {
-    return GestureDetector(
-      onTap: () => _navigateToGardeningService(context, title, description, image, price),
-      child: SizedBox(
-        width: 140,
-        height: 180,
-        child: Card(
-          color: Colors.green.shade100,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48.0, color: Colors.green),
-              const SizedBox(height: 8.0),
-              Text(
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => isGardening
+            ? _navigateToServiceDetails(
+                context,
                 title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.bold,
+                description,
+                image,
+                price,
+                'Gardening',
+              )
+            : _navigateToServiceDetails(
+                context,
+                title,
+                description,
+                image,
+                price,
+                'Landscaping',
+              ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: image.isNotEmpty
+                  ? Image.network(
+                      image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildPlaceholderImage();
+                      },
+                    )
+                  : _buildPlaceholderImage(),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
                 ),
               ),
-              const SizedBox(height: 8.0),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Icon(
+                      icon,
+                      size: 24,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _navigateToGardeningService(BuildContext context, String title, String description, String image, String price) {
-  
+  Widget _buildPlaceholderImage() {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(Icons.image_not_supported, size: 40),
+      ),
+    );
+  }
+
+  void _navigateToServiceDetails(
+    BuildContext context,
+    String title,
+    String description,
+    String image,
+    String price,
+    String serviceType,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -336,62 +451,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           serviceDescription: description,
           serviceImage: image,
           price: price,
-          serviceType: 'Gardening',
-        ),
-      ),
-    );
-  }
-
-  void _navigateToLandscapingService(BuildContext context, String title, String description, String image, String price) {
-  
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LandscapingServiceDetails(
-          serviceName: title,
-          serviceDescription: description,
-          serviceImage: image,
-          price: price,
-          serviceType: 'Landscaping',
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLandscapingServiceCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String description,
-    required String image,
-    required String price,
-  }) {
-    return GestureDetector(
-      onTap: () => _navigateToLandscapingService(context, title, description, image, price),
-      child: SizedBox(
-        width: 140,
-        height: 160,
-        child: Card(
-          color: Colors.green.shade100,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48.0, color: Colors.green),
-              const SizedBox(height: 8.0),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8.0),
-            ],
-          ),
+          serviceType: serviceType,
         ),
       ),
     );
