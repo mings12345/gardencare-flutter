@@ -67,11 +67,18 @@ class _GardeningScreenState extends State<GardeningScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Gardening Services"),
-        backgroundColor: Colors.green,
-        elevation: 0,
+     appBar: AppBar(
+      title: const Text(
+        "Gardening Services",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+      backgroundColor: Colors.green,
+      elevation: 0,
+       iconTheme: const IconThemeData(color: Colors.white),
+    ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

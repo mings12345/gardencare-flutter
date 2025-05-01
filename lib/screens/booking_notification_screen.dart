@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
-
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -129,6 +129,233 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
   }
 }
 
+    void _showPaymentDetails(Map<String, dynamic> booking) {
+  final payments = booking['payments'] ?? [];
+  
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.payment, color: Colors.green),
+            SizedBox(width: 10),
+            Text('Payment Details'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Booking #${booking['id'] ?? ''}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Total Amount: ₱${booking['total_price']}',
+                style: const TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              const Divider(),
+              if (payments.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(
+                    child: Text(
+                      'No payment records found',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Payment Transactions:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    ...payments.map((payment) => _buildPaymentCard(payment)).toList(),
+                  ],
+                ),
+              const Divider(),
+              _buildPaymentSummary(booking, payments),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: const Text("Close"),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildPaymentCard(Map<String, dynamic> payment) {
+  var amountPaid = payment['amount_paid'] ?? 0;
+  if (amountPaid is String) {
+    amountPaid = double.tryParse(amountPaid) ?? 0.0;
+  }
+  return Card(
+    margin: const EdgeInsets.only(bottom: 10),
+    elevation: 2,
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Amount Paid:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '₱${(amountPaid)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Date:'),
+              Text(
+                DateFormat('MMM dd, yyyy').format(
+                  DateTime.parse(payment['payment_date']).toLocal()
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Status:'),
+              Chip(
+                label: Text(
+                  payment['payment_status'] ?? 'Pending',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+                backgroundColor: payment['payment_status'] == 'Received' 
+                  ? Colors.green 
+                  : Colors.orange,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('From:'),
+              Text(payment['sender_no'] ?? 'N/A'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('To:'),
+              Text(payment['receiver_no'] ?? 'N/A'),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments) {
+  final totalPaid = payments.fold(0.0, (sum, payment) {
+    var amountPaid = payment['amount_paid'] ?? 0;
+    if (amountPaid is String) {
+      amountPaid = double.tryParse(amountPaid) ?? 0.0;
+    }
+    return sum + (amountPaid as num);
+  });
+  
+  var totalPrice = booking['total_price'] ?? 0;
+  if (totalPrice is String) {
+    totalPrice = double.tryParse(totalPrice) ?? 0.0;
+  }
+
+  final remainingBalance = (totalPrice as num) - totalPaid;
+  
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Payment Summary:',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 8),
+
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Payment Method:'),
+          Text(
+            'Garden Care',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Total Paid:'),
+          Text(
+            '₱${(totalPaid)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+      const SizedBox(height: 4),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Remaining Balance:'),
+          Text(
+            '₱${(remainingBalance)}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: remainingBalance > 0 ? Colors.red : Colors.green,
+            ),
+          ),
+        ],
+      ),
+      if (remainingBalance > 0) ...[
+        const SizedBox(height: 8),
+        Text(
+          'Note: Remaining balance of ₱${remainingBalance} will be automatically deducted to your account after completion.',
+          style: TextStyle(
+            color: Colors.orange.shade700,
+            fontStyle: FontStyle.italic,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ],
+  );
+}
 
   void _showBookingNotification(Map<String, dynamic> bookingData) {
     // Show a notification to the user
@@ -777,7 +1004,24 @@ class BookingNotificationCard extends StatelessWidget {
               ),
             ),
             SizedBox(height: 12),
-            
+            if ((booking['payments'] != null && booking['payments'].isNotEmpty) ||
+            (booking['payment_status'] != null && booking['payment_status'] != 'pending')) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              icon: const Icon(Icons.payment, size: 18),
+              label: const Text(
+                "View Payment Details",
+                style: TextStyle(color: Colors.green),
+              ),
+              onPressed: () {
+                final parentState = context.findAncestorStateOfType<_BookingNotificationsScreenState>();
+                parentState?._showPaymentDetails(booking);
+              },
+            ),
+          ),
+        ],
             if (status == 'pending')
               _buildActionButtons()
             else if (status == 'accepted')

@@ -12,11 +12,18 @@ class GardenerDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(gardener.name),
-        backgroundColor: Colors.green[800],
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+      title: Text(
+        gardener.name,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+      backgroundColor: Colors.green[800],
+      elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.white),
+    ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/banner_widget.dart';
 import './gardening_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HomeownerScreen extends StatefulWidget {
   final String name;
@@ -137,15 +138,15 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
             selectedColor: Colors.green,
           ),
           SalomonBottomBarItem(
-            icon: const Icon(Icons.bookmark),
+            icon: const FaIcon(FontAwesomeIcons.calendarCheck),
             title: const Text('Appointments'),
             selectedColor: Colors.green,
           ),
           SalomonBottomBarItem(
-            icon: const Icon(Icons.message),
-            title: const Text('Messages'),
-            selectedColor: Colors.green,
-          ),
+          icon: const FaIcon(FontAwesomeIcons.comment),
+          title: const Text('Messages'),
+          selectedColor: Colors.green,
+        ),
           SalomonBottomBarItem(
             icon: const Icon(Icons.account_circle),
             title: const Text('Profile'),

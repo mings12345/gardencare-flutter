@@ -33,7 +33,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     if (userId.isEmpty) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("User ID not found"),
           backgroundColor: Colors.red,
         ),
@@ -91,7 +91,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.payment, color: Colors.green),
             SizedBox(width: 10),
@@ -105,18 +105,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
             children: [
               Text(
                 'Booking #${booking['id'] ?? ''}',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
                 'Total Amount: ₱${booking['total_price']}',
-                style: TextStyle(fontSize: 15),
+                style: const TextStyle(fontSize: 15),
               ),
-              SizedBox(height: 10),
-              Divider(),
+              const SizedBox(height: 10),
+              const Divider(),
               if (payments.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
                   child: Center(
                     child: Text(
                       'No payment records found',
@@ -128,22 +128,22 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Payment Transactions:',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     ...payments.map((payment) => _buildPaymentCard(payment)).toList(),
                   ],
                 ),
-              Divider(),
+              const Divider(),
               _buildPaymentSummary(booking, payments),
             ],
           ),
         ),
         actions: [
           TextButton(
-            child: Text("Close"),
+            child: const Text("Close"),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -160,7 +160,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.star, color: Colors.amber),
             SizedBox(width: 10),
@@ -173,17 +173,17 @@ class _BookingsScreenState extends State<BookingsScreen> {
             children: [
               Text(
                 'How would you rate your service with ${booking['gardener']?['name'] ?? 'the gardener'}?',
-                style: TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               RatingBar.builder(
                 initialRating: _rating,
                 minRating: 1,
                 direction: Axis.horizontal,
                 allowHalfRating: true,
                 itemCount: 5,
-                itemPadding: EdgeInsets.symmetric(horizontal: 4.0),
-                itemBuilder: (context, _) => Icon(
+                itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                itemBuilder: (context, _) => const Icon(
                   Icons.star,
                   color: Colors.amber,
                 ),
@@ -191,10 +191,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   _rating = rating;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextField(
                 controller: _feedbackController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Feedback (optional)',
                   border: OutlineInputBorder(),
                 ),
@@ -205,18 +205,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
         ),
         actions: [
           TextButton(
-            child: Text("Cancel"),
+            child: const Text("Cancel"),
             onPressed: () => Navigator.of(context).pop(),
           ),
           ElevatedButton(
-            child: Text("Submit"),
+            child: const Text("Submit"),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
             ),
             onPressed: () async {
               if (_rating == 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Please select a rating')),
+                  const SnackBar(content: Text('Please select a rating')),
                 );
                 return;
               }
@@ -224,7 +224,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
               try {
                 // Show loading indicator
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+                  const SnackBar(
                     content: Row(
                       children: [
                         CircularProgressIndicator(),
@@ -261,7 +261,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
                 // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Thank you for your feedback!')),
+                  const SnackBar(content: Text('Thank you for your feedback!')),
                 );
 
               } catch (e) {
@@ -296,10 +296,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
    if (booking['rating'] == null) {
     return Column(
       children: [
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
         ElevatedButton(
           onPressed: () => _showRatingDialog(booking),
-          child: Text(
+          child: const Text(
             'Rate This Service',
             style: TextStyle(color: Colors.white),
           ),
@@ -314,7 +314,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      SizedBox(height: 10),
+      const SizedBox(height: 10),
       Text(
         "Your Rating:",
         style: GoogleFonts.poppins(
@@ -323,12 +323,12 @@ class _BookingsScreenState extends State<BookingsScreen> {
           color: Colors.grey.shade800,
         ),
       ),
-      SizedBox(height: 4),
+      const SizedBox(height: 4),
       Row(
         children: [
           RatingBarIndicator(
             rating: booking['rating']?.toDouble() ?? 0,
-            itemBuilder: (context, index) => Icon(
+            itemBuilder: (context, index) => const Icon(
               Icons.star,
               color: Colors.amber,
             ),
@@ -336,15 +336,15 @@ class _BookingsScreenState extends State<BookingsScreen> {
             itemSize: 20.0,
             direction: Axis.horizontal,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
             booking['rating']?.toStringAsFixed(1) ?? '0',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
       ),
       if (booking['feedback'] != null && booking['feedback'].toString().isNotEmpty) ...[
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Text(
           "Your Feedback:",
           style: GoogleFonts.poppins(
@@ -353,9 +353,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
             color: Colors.grey.shade800,
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Container(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
@@ -379,17 +379,17 @@ class _BookingsScreenState extends State<BookingsScreen> {
     amountPaid = double.tryParse(amountPaid) ?? 0.0;
   }
   return Card(
-    margin: EdgeInsets.only(bottom: 10),
+    margin: const EdgeInsets.only(bottom: 10),
     elevation: 2,
     child: Padding(
-      padding: EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Amount Paid:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -402,27 +402,27 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Date:'),
+              const Text('Date:'),
               Text(
-                DateFormat('MMM dd, yyyy • h:mm a').format(
+                DateFormat('MMM dd, yyyy').format(
                   DateTime.parse(payment['payment_date']).toLocal()
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Status:'),
+              const Text('Status:'),
               Chip(
                 label: Text(
                   payment['payment_status'] ?? 'Pending',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                   ),
@@ -433,19 +433,19 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('From:'),
+              const Text('From:'),
               Text(payment['sender_no'] ?? 'N/A'),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('To:'),
+              const Text('To:'),
               Text(payment['receiver_no'] ?? 'N/A'),
             ],
           ),
@@ -475,16 +475,16 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
+      const Text(
         'Payment Summary:',
         style: TextStyle(fontWeight: FontWeight.bold),
       ),
-      SizedBox(height: 8),
+      const SizedBox(height: 8),
 
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Payment Method:'),
+          const Text('Payment Method:'),
           Text(
             'Garden Care',
             style: TextStyle(
@@ -494,22 +494,22 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
           ),
         ],
       ),
-      SizedBox(height: 8),
+      const SizedBox(height: 8),
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Total Paid:'),
+          const Text('Total Paid:'),
           Text(
             '₱${(totalPaid)}',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
       ),
-      SizedBox(height: 4),
+      const SizedBox(height: 4),
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Remaining Balance:'),
+          const Text('Remaining Balance:'),
           Text(
             '₱${(remainingBalance)}',
             style: TextStyle(
@@ -520,7 +520,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
         ],
       ),
       if (remainingBalance > 0) ...[
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Text(
           'Note: Remaining balance of ₱${remainingBalance} will be automatically deducted to your account after completion.',
           style: TextStyle(
@@ -620,7 +620,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
           ),
         ),
         child: _isLoading
-          ? Center(
+          ? const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
               ),
@@ -631,7 +631,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Text(
                         _error!,
                         style: GoogleFonts.poppins(
@@ -653,7 +653,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                             size: 80, 
                             color: Colors.green.shade200
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
                             "No Appointments found",
                             style: GoogleFonts.poppins(
@@ -662,7 +662,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                               color: Colors.grey.shade800,
                             ),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text(
                             "Your appointments will appear here",
                             style: GoogleFonts.poppins(
@@ -677,14 +677,14 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                       onRefresh: _fetchHomeownerBookings,
                       color: Colors.green,
                       child: ListView.builder(
-                        padding: EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(12),
                         itemCount: _bookings.length,
                         itemBuilder: (context, index) {
                           final booking = _bookings[index];
                           final serviceType = booking['type']?.toString() ?? "Garden Service";
                           
                           return Card(
-                            margin: EdgeInsets.only(bottom: 16),
+                            margin: const EdgeInsets.only(bottom: 16),
                             elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -694,10 +694,10 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                 // Service Type Tag
                                 Container(
                                   width: double.infinity,
-                                  padding: EdgeInsets.symmetric(vertical: 6),
+                                  padding: const EdgeInsets.symmetric(vertical: 6),
                                   decoration: BoxDecoration(
                                     color: getServiceColor(booking).withOpacity(0.8),
-                                    borderRadius: BorderRadius.only(
+                                    borderRadius: const BorderRadius.only(
                                       topLeft: Radius.circular(16),
                                       topRight: Radius.circular(16),
                                     ),
@@ -711,7 +711,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                           size: 16,
                                           color: Colors.white,
                                         ),
-                                        SizedBox(width: 6),
+                                        const SizedBox(width: 6),
                                         Text(
                                           serviceType.toUpperCase(),
                                           style: GoogleFonts.poppins(
@@ -731,7 +731,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                   decoration: BoxDecoration(
                                     color: Colors.green.shade50,
                                   ),
-                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
@@ -747,7 +747,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                         ),
                                       ),
                                       Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: _getStatusColor(booking['status']).withOpacity(0.2),
                                           borderRadius: BorderRadius.circular(20),
@@ -767,7 +767,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
 
                                 // Booking details section
                                 Padding(
-                                  padding: EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(16),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -776,7 +776,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                           Icon(Icons.confirmation_number_outlined, 
                                                size: 18, 
                                                color: Colors.grey.shade600),
-                                          SizedBox(width: 8),
+                                          const SizedBox(width: 8),
                                           Text(
                                             "Booking #${booking['id'] ?? ''}",
                                             style: GoogleFonts.poppins(
@@ -787,7 +787,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 12),
+                                      const SizedBox(height: 12),
                                       
                                       
                                       if (booking['gardener'] != null) ...[
@@ -796,14 +796,14 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                           "Gardener",
                                           booking['gardener']['name'],
                                         ),
-                                        SizedBox(height: 10),
+                                        const SizedBox(height: 10),
                                       ]else if (booking['service_provider'] != null) ...[
                                     _buildInfoRow(
                                       Icons.person_outline,
                                       "Service Provider",
                                       booking['service_provider']['name'],
                                     ),
-                                    SizedBox(height: 10),
+                                    const SizedBox(height: 10),
                                   ],
                                                                         
                                       _buildInfoRow(
@@ -811,7 +811,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                         "Address",
                                         booking['address'] ?? 'Not specified',
                                       ),
-                                      SizedBox(height: 10),
+                                      const SizedBox(height: 10),
                                       
                                       Row(
                                         children: [
@@ -831,22 +831,22 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 10),
+                                      const SizedBox(height: 10),
                                       
                                       _buildInfoRow(
                                         Icons.event_note_outlined,
                                         "Created on",
                                         booking['created_at'] != null 
-                                          ? DateFormat('MMM dd, yyyy • h:mm a').format(
+                                          ? DateFormat('MMM dd, yyyy').format(
                                               DateTime.parse(booking['created_at']).toLocal()
                                             )
                                           : 'Not available',
                                       ),
-                                      SizedBox(height: 10),
+                                      const SizedBox(height: 10),
                                       
                                       if (booking['special_instructions'] != null &&
                                           booking['special_instructions'].toString().isNotEmpty) ...[
-                                        SizedBox(height: 16),
+                                        const SizedBox(height: 16),
                                         Text(
                                           "Special Instructions:",
                                           style: GoogleFonts.poppins(
@@ -855,9 +855,9 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                             color: Colors.grey.shade800,
                                           ),
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         Container(
-                                          padding: EdgeInsets.all(12),
+                                          padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
                                             color: Colors.grey.shade100,
                                             borderRadius: BorderRadius.circular(8),
@@ -873,12 +873,12 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                                       ],
                                       if ((booking['payments'] != null && booking['payments'].isNotEmpty) || 
                           (booking['payment_status'] != null && booking['payment_status'] != 'pending')) ...[
-                        SizedBox(height: 10),
+                        const SizedBox(height: 10),
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton.icon(
-                            icon: Icon(Icons.payment, size: 18),
-                            label: Text(
+                            icon: const Icon(Icons.payment, size: 18),
+                            label: const Text(
                               "View Payment Details",
                               style: TextStyle(color: Colors.green),
                             ),
@@ -888,10 +888,10 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
                       ],
                            if (booking['status']?.toLowerCase() == 'completed') ...[
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: _buildRatingSection(booking),
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                                             ],
                               ]),
                                 ),
@@ -914,7 +914,7 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
           size: 18, 
           color: isHighlighted ? Colors.green.shade700 : Colors.grey.shade600
         ),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

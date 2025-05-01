@@ -64,14 +64,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _sendOtp() async {
     if (_accountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter your Account number")),
+        const SnackBar(
+          content: Text("Please enter your Account number"),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
     if (!RegExp(r'^09\d{9}$').hasMatch(_accountController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid Account number (09XXXXXXXXX)")),
+        const SnackBar(
+          content: Text("Please enter a valid Account number (09XXXXXXXXX)"),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -92,13 +98,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // Show OTP to user (in production, this would be sent via SMS)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("OTP Sent to your account number", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text("Your OTP is: $_otp"),
-            const SizedBox(height: 4),
+            const Text("OTP Sent to your account number", 
+              style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text("Your OTP is: $_otp", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
             const Text("Enter this code to verify your account number"),
           ],
         ),
@@ -110,23 +122,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _verifyOtp() async {
     if (_enteredOtp == null || _enteredOtp!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter the OTP")),
+        const SnackBar(
+          content: Text("Please enter the OTP"),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
     if (_enteredOtp != _otp) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid OTP. Please try again.")),
+        const SnackBar(
+          content: Text("Invalid OTP. Please try again."),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
     setState(() => _isVerifyingOtp = true);
-
-    // If OTP is correct, proceed with saving
-    _saveChanges();
-
+    await _saveChanges();
     setState(() {
       _isVerifyingOtp = false;
       _showOtpField = false;
@@ -138,10 +153,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _accountController.clear();
       _showOtpField = false;
     });
-    _saveChanges();
+    await _saveChanges();
   }
 
-  void _saveChanges() async {
+  Future<void> _saveChanges() async {
     final updatedProfile = {
       'name': _nameController.text,
       'email': _emailController.text,
@@ -149,7 +164,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'phone': _phoneController.text,
       'account': _accountController.text,
     };
-    print("Updated Profile: $updatedProfile");
 
     final String baseUrl = dotenv.get('BASE_URL'); 
     final token = await AuthService.getToken();
@@ -165,28 +179,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       if (response.statusCode == 200) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      userProvider.updateAccountNo(_accountController.text);
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        userProvider.updateAccountNo(_accountController.text);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Profile updated successfully!"),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            content: const Text("Profile updated successfully!"),
+            backgroundColor: Colors.green,
           ),
         );
         Navigator.pop(context, updatedProfile);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
             content: Text("Failed to update profile. Status Code: ${response.statusCode}"),
-            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text("Error: $e"),
-          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -197,78 +217,178 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Edit Profile"),
-        backgroundColor: Colors.green,
+        centerTitle: true,
+        backgroundColor: Colors.green[700],
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(16),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           children: [
-            TextFormField(
+            const SizedBox(height: 16),
+            // Profile Picture Section
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.grey[200],
+                      border: Border.all(
+                        color: Colors.green[300]!,
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      size: 60,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.green[700],
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            // Form Fields
+            _buildInputField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: "Name"),
-            ),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: "Email"),
-            ),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(labelText: "Address"),
-            ),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: "Phone"),
+              label: "Full Name",
+              icon: Icons.person_outline,
             ),
             const SizedBox(height: 16),
+            _buildInputField(
+              controller: _emailController,
+              label: "Email Address",
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            _buildInputField(
+              controller: _addressController,
+              label: "Address",
+              icon: Icons.location_on_outlined,
+            ),
+            const SizedBox(height: 16),
+            _buildInputField(
+              controller: _phoneController,
+              label: "Phone Number",
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 24),
             
-            //  Number Section
+            // Account Number Section
+            Text(
+              "Account Verification",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Verify your account number to enable payments",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
+                  child: _buildInputField(
                     controller: _accountController,
-                    decoration: const InputDecoration(
-                      labelText: "Account Number",
-                      hintText: "09XXXXXXXXX",
-                    ),
+                    label: "Account Number",
+                    hintText: "09XXXXXXXXX",
+                    icon: Icons.account_balance_wallet_outlined,
                     keyboardType: TextInputType.phone,
+                    suffixIcon: _accountController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: _removeAccount,
+                          )
+                        : null,
                   ),
                 ),
-                if (_accountController.text.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: _removeAccount,
-                  ),
               ],
             ),
             
             if (_showOtpField) ...[
               const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: "Enter OTP",
-                  hintText: "6-digit code",
-                ),
+              _buildInputField(
+                label: "Enter OTP",
+                hintText: "6-digit code",
+                controller: TextEditingController(),   
+                icon: Icons.lock_outline,
                 keyboardType: TextInputType.number,
                 onChanged: (value) => _enteredOtp = value,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   TextButton(
                     onPressed: _isSendingOtp ? null : _sendOtp,
-                    child: const Text("Resend OTP"),
+                    child: Text(
+                      "Resend OTP",
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                   const Spacer(),
                   ElevatedButton(
                     onPressed: _isVerifyingOtp ? null : _verifyOtp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
                     child: _isVerifyingOtp
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : const Text("Verify OTP"),
+                        : const Text(
+                            "Verify OTP",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
                   ),
                 ],
               ),
@@ -278,12 +398,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _isSendingOtp ? null : _sendOtp,
-                  child: const Text("Update Account Number"),
+                  child: Text(
+                    "Update Account Number",
+                    style: TextStyle(
+                      color: Colors.green[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ],
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _accountController.text.isNotEmpty && !_showOtpField
                   ? _saveChanges
@@ -291,16 +417,65 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ? null
                       : _saveChanges,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                backgroundColor: Colors.green[700],
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: const Text(
-                "Save Changes",
-                style: TextStyle(fontSize: 16),
+                "SAVE CHANGES",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
+            const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController? controller,
+    required String label,
+    String? hintText,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    Widget? suffixIcon,
+    void Function(String)? onChanged,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        labelStyle: TextStyle(color: Colors.grey[600]),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.green[400]!, width: 2),
+        ),
+        prefixIcon: Icon(icon, color: Colors.grey[600]),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       ),
     );
   }

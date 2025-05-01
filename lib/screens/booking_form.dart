@@ -908,9 +908,17 @@ Future<void> submitBooking() async {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Book Service"),
-        backgroundColor: Colors.green,
+      title: const Text(
+        "Reservation Service",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+      backgroundColor: Colors.green,
+      iconTheme: const IconThemeData(color: Colors.white),
+    ),
+
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

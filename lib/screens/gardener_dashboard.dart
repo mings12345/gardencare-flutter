@@ -42,12 +42,14 @@ class GardenerDashboard extends StatefulWidget {
 
 class _GardenerDashboardState extends State<GardenerDashboard> {
   int bookingCount = 0;
+  int serviceCount = 0;
+  bool isLoadingServices = false;
   bool isLoading = true;
   double balance = 0.0;
   double totalEarnings = 0.0;
-List<dynamic> transactions = [];
-bool isLoadingWallet = false;
- bool isLoadingEarnings = false; 
+  List<dynamic> transactions = [];
+  bool isLoadingWallet = false;
+  bool isLoadingEarnings = false; 
 
   @override
   void initState() {
@@ -55,7 +57,32 @@ bool isLoadingWallet = false;
     _fetchBookingCount();
     _loadWalletData(); 
      _fetchTotalEarnings();
+     _fetchServiceCount();
   }
+      
+      Future<void> _fetchServiceCount() async {
+      setState(() => isLoadingServices = true);
+      try {
+        final String baseUrl = dotenv.get('BASE_URL');
+        final response = await http.get(
+          Uri.parse('$baseUrl/api/services/count'),
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          setState(() {
+            serviceCount = data['gardening_count'] ?? 0;
+          });
+        }
+      } catch (e) {
+        print('Error fetching service count: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load service count')),
+        );
+      } finally {
+        setState(() => isLoadingServices = false);
+      }
+    }
 
       Future<void> _fetchTotalEarnings() async {
     setState(() => isLoadingEarnings = true);
@@ -333,29 +360,20 @@ void _showSuccessScreen(String amount, String transactionType) {
   setState(() {
     isLoading = true;
     isLoadingWallet = true;
-     isLoadingEarnings = true;
+    isLoadingEarnings = true;
+    isLoadingServices = true;
   });
   
-  // Refresh all data sources
-    await Future.wait([
-      _fetchBookingCount(),
-      _loadWalletData(),
-      _fetchTotalEarnings(),
-    ]);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dashboard refreshed')),
-      );
-    }
+  await Future.wait([
+    _fetchBookingCount(),
+    _loadWalletData(),
+    _fetchTotalEarnings(),
+    _fetchServiceCount(), // Add this line
+  ]);
   
-  // Show a confirmation to the user
   if (mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Dashboard refreshed'),
-        duration: Duration(seconds: 1),
-      ),
+      const SnackBar(content: Text('Dashboard refreshed')),
     );
   }
 }
@@ -683,10 +701,10 @@ void _openWithdrawDialog() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Hello, Gardener',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+              Text(
+            'Hello, ${widget.name}',  // Using widget.name from the widget properties
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
             const SizedBox(height: 8),
             const Text(
               'Welcome back!',
@@ -719,14 +737,16 @@ void _openWithdrawDialog() {
                       : _buildDashboardCard(bookingCount.toString(), 'Total Booking', Icons.calendar_today),
                 ),
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => TotalServiceScreen(userRole: 'gardener')),
-                    );
-                  },
-                  child: _buildDashboardCard('3', 'Total Service', Icons.list_alt),
-                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TotalServiceScreen(userRole: 'gardener')),
+                  );
+                },
+                child: isLoadingServices
+                    ? _buildLoadingCard()
+                    : _buildDashboardCard(serviceCount.toString(), 'Total Service', Icons.list_alt),
+              ),
           GestureDetector(
                                     onTap: () {
                     Navigator.push(

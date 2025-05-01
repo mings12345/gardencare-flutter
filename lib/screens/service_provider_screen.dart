@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
-import 'package:gardencare_app/screens/availability_screen.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
@@ -41,6 +40,8 @@ class ServiceProviderScreen extends StatefulWidget {
 
 class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
   int bookingCount = 0;
+  int serviceCount = 0;
+  bool isLoadingServices = false;
   bool isLoading = true;
   double balance = 0.0;
   double totalEarnings = 0.0;
@@ -54,7 +55,41 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
     _fetchBookingCount();
     _loadWalletData();
     _fetchTotalEarnings();
+    _fetchServiceCount();
   }
+
+    Future<void> _fetchServiceCount() async {
+  setState(() => isLoadingServices = true);
+  try {
+    final String baseUrl = dotenv.get('BASE_URL');
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/services/count'),
+    );
+
+    print('Service count response: ${response.statusCode} - ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        serviceCount = data['landscaping_count'] ?? 0; // Note: using landscaping_count for service providers
+      });
+    } else {
+      throw Exception('Failed to load service count: ${response.statusCode}');
+    }
+  } on FormatException catch (e) {
+    print('JSON Format Error: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Server returned invalid data')),
+    );
+  } catch (e) {
+    print('Error fetching service count: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Failed to connect to server')),
+    );
+  } finally {
+    setState(() => isLoadingServices = false);
+  }
+}
 
   Future<void> _fetchTotalEarnings() async {
     setState(() => isLoadingEarnings = true);
@@ -151,6 +186,16 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                 ],
               ),
               SizedBox(height: 16),
+              const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            'Transaction History',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _loadWalletData,
@@ -444,24 +489,26 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
 
 
   Future<void> _refreshAllData() async {
-    setState(() {
-      isLoading = true;
-      isLoadingWallet = true;
-      isLoadingEarnings = true;
-    });
-    
-    await Future.wait([
-      _fetchBookingCount(),
-      _loadWalletData(),
-      _fetchTotalEarnings(),
-    ]);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dashboard refreshed')),
-      );
-    }
+  setState(() {
+    isLoading = true;
+    isLoadingWallet = true;
+    isLoadingEarnings = true;
+    isLoadingServices = true;
+  });
+  
+  await Future.wait([
+    _fetchBookingCount(),
+    _loadWalletData(),
+    _fetchTotalEarnings(),
+    _fetchServiceCount(), 
+  ]);
+  
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Dashboard refreshed')),
+    );
   }
+}
 
   Future<void> _fetchBookingCount() async {
     try {
@@ -609,16 +656,6 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.access_time),
-              title: const Text('Set Availability'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AvailabilityScreen()),
-                );
-              },
-            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
@@ -659,10 +696,10 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Hello, Service Provider',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
+              Text(
+            'Hello, ${widget.name}',  // Using widget.name from the widget properties
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
               const SizedBox(height: 8),
               const Text(
                 'Welcome back!',
@@ -694,15 +731,17 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
                         ? _buildLoadingCard()
                         : _buildDashboardCard(bookingCount.toString(), 'Total Booking', Icons.calendar_today),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => TotalServiceScreen(userRole: 'service_provider')),
-                      );
-                    },
-                    child: _buildDashboardCard('3', 'Total Service', Icons.list_alt),
-                  ),
+                 GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TotalServiceScreen(userRole: 'service_provider')),
+                  );
+                },
+                child: isLoadingServices
+                    ? _buildLoadingCard()
+                    : _buildDashboardCard(serviceCount.toString(), 'Total Service', Icons.list_alt),
+              ),
                   GestureDetector(
                      onTap: () {
                     Navigator.push(
