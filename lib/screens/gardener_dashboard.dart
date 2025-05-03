@@ -6,6 +6,8 @@ import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/booking_notification_screen.dart';
 import 'package:gardencare_app/screens/earnigs_summary_screen.dart';
+import 'package:gardencare_app/screens/login_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -525,9 +527,15 @@ void _openWithdrawDialog() {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gardener Dashboard'),
-        backgroundColor: Colors.green,
+      title: Text(
+        'Gardener Dashboard',
+        style: GoogleFonts.poppins( 
+          color: Colors.white,
+          fontSize: 20,
+        ),
       ),
+      backgroundColor: Colors.green,
+    ),
       drawer: Drawer(
         child: ListView(
           children: [
@@ -672,16 +680,62 @@ void _openWithdrawDialog() {
                     content: const Text('Are you sure you want to logout?'),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context), // Close dialog
+                        onPressed: () => Navigator.pop(context),
                         child: const Text('Cancel'),
                       ),
                       TextButton(
                         onPressed: () async {
-                          // Clear any stored user data here
-                          SharedPreferences prefs = await SharedPreferences.getInstance();
-                          await prefs.clear();
-                          Navigator.pop(context); // Close dialog
-                          Navigator.pushReplacementNamed(context, '/'); // Navigate to login screen
+                          final token = await AuthService.getToken();
+                          print("Retrieved Token: $token");
+
+                          if (token == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("No token found. Please log in again."),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                            Navigator.pop(context);
+                            return;
+                          }
+
+                          try {
+                            final String baseUrl = dotenv.get('BASE_URL');
+                            final response = await http.post(
+                              Uri.parse('$baseUrl/api/logout'),
+                              headers: {
+                                'Authorization': 'Bearer $token',
+                              },
+                            );
+
+                            print("Response Status Code: ${response.statusCode}");
+                            print("Response Body: ${response.body}");
+
+                            if (response.statusCode == 200) {
+                              await AuthService.clearToken();
+                              Navigator.pop(context); // Close dialog
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => LoginScreen()),
+                              );
+                            } else {
+                              Navigator.pop(context); // Close dialog
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            Navigator.pop(context); // Close dialog
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Error: $e"),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
                         },
                         child: const Text('Logout'),
                       ),

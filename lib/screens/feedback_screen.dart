@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -75,13 +76,20 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Customer Feedback'),
+        title: Text(
+          'Homeowner Feedback',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 19,
+          ),
+        ),
         backgroundColor: Colors.green.shade700,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchFeedback,
+            color: Colors.white ,
           ),
         ],
       ),

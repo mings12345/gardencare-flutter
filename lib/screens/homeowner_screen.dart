@@ -6,12 +6,14 @@ import 'package:gardencare_app/screens/plant_care_screen.dart';
 import 'package:gardencare_app/screens/service_details_screen.dart';
 import 'package:gardencare_app/screens/landscaping_screen.dart';
 import 'package:gardencare_app/screens/profile_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/banner_widget.dart';
 import './gardening_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 
 class HomeownerScreen extends StatefulWidget {
   final String name;
@@ -103,10 +105,17 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
     return Scaffold(
       appBar: _selectedIndex == 0
           ? AppBar(
-              title: const Text("Welcome to GardenCare"),
-              backgroundColor: Colors.green,
-               automaticallyImplyLeading: false, 
-            )
+          title: Text(
+        "Welcome to GardenCare",
+        style: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+          backgroundColor: Colors.green,
+          automaticallyImplyLeading: false,
+        )
           : null,
       body: PageView(
         controller: _pageController,
@@ -256,6 +265,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
               image: service['image'] ?? '',
               price: '₱${service['price']}',
               isGardening: true,
+               service: service,
             );
           }).toList(),
         ),
@@ -307,6 +317,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
               image: service['image'] ?? '',
               price: '₱${service['price']}',
               isGardening: false,
+              service: service,
             );
           }).toList(),
         ),
@@ -335,6 +346,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
     required String image,
     required String price,
     required bool isGardening,
+     required Map<String, dynamic> service,
   }) {
     return Card(
       elevation: 4,
@@ -351,6 +363,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
                 image,
                 price,
                 'Gardening',
+                service, 
               )
             : _navigateToServiceDetails(
                 context,
@@ -359,6 +372,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
                 image,
                 price,
                 'Landscaping',
+                service,
               ),
         child: Stack(
           children: [
@@ -443,11 +457,13 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
     String image,
     String price,
     String serviceType,
+     Map<String, dynamic> service, 
   ) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ServiceDetailsScreen(
+          service: service,
           serviceName: title,
           serviceDescription: description,
           serviceImage: image,

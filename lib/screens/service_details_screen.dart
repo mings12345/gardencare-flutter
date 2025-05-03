@@ -11,6 +11,7 @@ class ServiceDetailsScreen extends StatelessWidget {
   final String price;
   final String serviceType;
   final AuthService authService = AuthService();
+  final Map<String, dynamic> service;
 
   ServiceDetailsScreen({
     Key? key,
@@ -19,6 +20,7 @@ class ServiceDetailsScreen extends StatelessWidget {
     required this.serviceImage,
     required this.price,
     required this.serviceType,
+    required this.service,
   }) : super(key: key);
 
 
@@ -175,32 +177,35 @@ class ServiceDetailsScreen extends StatelessWidget {
             const SizedBox(height: 28),
             // Book Service Button with gradient
             SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.green[800],
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                  shadowColor: Colors.green.withOpacity(0.3),
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.green[800],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BookingForm(),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Book This Service',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                elevation: 3,
+                shadowColor: Colors.green.withOpacity(0.3),
+              ),
+              onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingForm(
+                  preselectedServiceId: service['id'], // Use actual ID from your service object
+                  serviceType: serviceType,
                 ),
               ),
+            );
+          },
+              child: const Text(
+                'Book This Service',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
             ),
+          ),
             const SizedBox(height: 32),
             
             // Available Gardeners Section Header

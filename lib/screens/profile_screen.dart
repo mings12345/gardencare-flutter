@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/auth_service.dart';
+import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:gardencare_app/screens/booking_history.dart';
 import 'package:gardencare_app/screens/edit_profile_screen.dart';
 import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -458,18 +460,19 @@ void _showSuccessScreen(String amount, String transactionType) {
 
   @override
   Widget build(BuildContext context) {
+     final userProvider = Provider.of<UserProvider>(context);
     return Scaffold(
       body: Column(
         children: [
           Expanded(
               flex: 2,
               child: _TopPortion(
-                  name: name,
-                  email: email,
-                  address: address,
-                  phone: phone,
-                  account: account,
-                  )), 
+                   name: userProvider.name ?? '',
+                  email: userProvider.email ?? '',
+                  address: userProvider.address ?? '',
+                  phone: userProvider.phone ?? '',
+                  account: userProvider.account ?? '',
+                      )), 
           Expanded(
             flex: 5,
             child: SingleChildScrollView(

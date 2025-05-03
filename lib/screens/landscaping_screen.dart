@@ -64,9 +64,16 @@ class _LandscapingScreenState extends State<LandscapingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Landscaping Services"),
+        title: const Text(
+          "Landscaping Services",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: Colors.green,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -192,7 +199,10 @@ class _LandscapingScreenState extends State<LandscapingScreen> {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => BookingForm(),
+                                                    builder: (context) => BookingForm(
+                                                      preselectedServiceId: service['id'],
+                                                      serviceType: 'Landscaping',
+                                                    ),
                                                   ),
                                                 );
                                               },
@@ -217,6 +227,7 @@ class _LandscapingScreenState extends State<LandscapingScreen> {
                                                   context,
                                                   MaterialPageRoute(
                                                     builder: (context) => ServiceDetailsScreen(
+                                                      service: service,
                                                       serviceName: service['name'],
                                                       serviceDescription: service['description'] ?? '',
                                                       serviceImage: service['image'] ?? '',

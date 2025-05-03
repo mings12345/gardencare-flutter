@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/services/pusher_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'booking_details_screen.dart';
@@ -276,9 +277,15 @@ String _formatDate(String dateString) {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.userRole == 'gardener' ? 'My Bookings' : 'My Bookings'),
-        backgroundColor: Colors.green,
+      title: Text(
+        widget.userRole == 'gardener' ? 'My Bookings' : 'My Bookings',
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: 20,
+        ),
       ),
+      backgroundColor: Colors.green,
+    ),
       body: RefreshIndicator(
         onRefresh: _refreshBookings,
         child: Padding(

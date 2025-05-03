@@ -199,28 +199,31 @@ class _GardeningScreenState extends State<GardeningScreen> {
                                           children: [
                                             // Book Now Button
                                             ElevatedButton(
-                                              onPressed: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) => BookingForm(),
-                                                  ),
-                                                );
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.green[800],
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              child: const Text(
-                                                'Book Now',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: Colors.white,
-                                                ),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => BookingForm(
+                                                preselectedServiceId: service['id'],
+                                                serviceType: 'Gardening',
                                               ),
                                             ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green[800],
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Book Now',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
                                             // View Details Link
                                             GestureDetector(
                                               onTap: () {
@@ -228,6 +231,7 @@ class _GardeningScreenState extends State<GardeningScreen> {
                                                   context,
                                                   MaterialPageRoute(
                                                     builder: (context) => ServiceDetailsScreen(
+                                                      service: service,
                                                       serviceName: service['name'],
                                                       serviceDescription: service['description'] ?? '',
                                                       serviceImage: service['image'] ?? '',

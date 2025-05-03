@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/screens/chat_screen.dart';
 import 'package:gardencare_app/models/user.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
@@ -146,10 +147,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(appBarTitle),
+        title: Text(
+          appBarTitle,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.green[700],
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
               _fetchChatUsers();
               _checkForNewMessages();
@@ -163,23 +172,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   Widget _buildBody() {
     if (isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.green[700]!),
+        ),
+      );
     }
 
     return Column(
       children: [
         if (infoMessage != null)
           Container(
-            padding: EdgeInsets.all(8),
-            color: Colors.blue[50],
+            padding: EdgeInsets.all(12),
+            margin: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[100]!),
+            ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.blue),
+                Icon(Icons.info_outline, color: Colors.blue[800]),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     infoMessage!,
-                    style: TextStyle(color: Colors.blue[800]),
+                    style: GoogleFonts.poppins(
+                      color: Colors.blue[800],
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],
@@ -191,11 +212,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("No users available"),
+                      Icon(Icons.people_alt_outlined, 
+                          size: 64, 
+                          color: Colors.grey[400]),
                       SizedBox(height: 16),
+                      Text(
+                        "No users available",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: _fetchChatUsers,
-                        child: Text('Refresh'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[700],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(
+                          'Refresh',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -206,61 +251,84 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     final user = users[index];
                     final unreadCount = unreadCounts[user.id] ?? 0;
                     
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: user.profilePictureUrl != null
-                              ? NetworkImage(user.profilePictureUrl!)
-                              : AssetImage('assets/images/default_profile.png') 
-                                  as ImageProvider,
-                          child: user.profilePictureUrl == null
-                              ? Text(user.name[0].toUpperCase())
-                              : null,
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        title: Text(user.name),
-                        subtitle: Text(
-                          user.userType == 'gardener' 
-                              ? 'Gardener' 
-                              : user.userType == 'service_provider'
-                                ? 'Service Provider'
-                                : 'Homeowner',
-                        ),
-                        trailing: _buildNotificationBadge(unreadCount),
-                        onTap: () async {
-                          final prefs = await SharedPreferences.getInstance();
-                          final currentToken = prefs.getString('token') ?? '';
-                          final currentUserId = prefs.getInt('userId');
-                          
-                          if (currentToken.isEmpty || currentUserId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Authentication required'))
-                            );
-                            return;
-                          }
-
-                          // Clear unread count when opening chat
-                          if (unreadCount > 0) {
-                            setState(() {
-                              unreadCounts[user.id] = 0;
-                            });
-                          }
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatScreen(
-                                currentUserId: currentUserId,
-                                otherUserId: user.id,
-                                authToken: currentToken,
-                                userId: user.id,
-                              ),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.all(12),
+                          leading: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Colors.green[100],
+                            backgroundImage: user.profilePictureUrl != null
+                                ? NetworkImage(user.profilePictureUrl!)
+                                : null,
+                            child: user.profilePictureUrl == null
+                                ? Text(
+                                    user.name[0].toUpperCase(),
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[800],
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          title: Text(
+                            user.name,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w500,
                             ),
-                          ).then((_) {
-                            // When returning from chat screen, check for new messages
-                            _checkForNewMessages();
-                          });
-                        },
+                          ),
+                          subtitle: Text(
+                            user.userType == 'gardener' 
+                                ? 'Gardener' 
+                                : user.userType == 'service_provider'
+                                  ? 'Service Provider'
+                                  : 'Homeowner',
+                            style: GoogleFonts.poppins(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                            ),
+                          ),
+                          trailing: _buildNotificationBadge(unreadCount),
+                          onTap: () async {
+                            // [Keep all existing onTap code exactly the same]
+                            final prefs = await SharedPreferences.getInstance();
+                            final currentToken = prefs.getString('token') ?? '';
+                            final currentUserId = prefs.getInt('userId');
+                            
+                            if (currentToken.isEmpty || currentUserId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Authentication required'))
+                              );
+                              return;
+                            }
+
+                            if (unreadCount > 0) {
+                              setState(() {
+                                unreadCounts[user.id] = 0;
+                              });
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                  currentUserId: currentUserId,
+                                  otherUserId: user.id,
+                                  authToken: currentToken,
+                                  userId: user.id,
+                                ),
+                              ),
+                            ).then((_) {
+                              _checkForNewMessages();
+                            });
+                          },
+                        ),
                       ),
                     );
                   },
@@ -272,37 +340,38 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   Widget _buildNotificationBadge(int count) {
     if (count <= 0) {
-      return Icon(Icons.chat_bubble_outline);
+      return Icon(Icons.chat_bubble_outline, color: Colors.grey[500]);
     }
     
     return Stack(
       alignment: Alignment.center,
       children: [
-        Icon(Icons.chat_bubble_outline),
+        Icon(Icons.chat_bubble, color: Colors.green[700]),
         Positioned(
           right: 0,
           top: 0,
           child: Container(
-            padding: EdgeInsets.all(2),
-            constraints: const BoxConstraints(
-              minWidth: 16,
-              minHeight: 16,
+            padding: EdgeInsets.all(4),
+            constraints: BoxConstraints(
+              minWidth: 20,
+              minHeight: 20,
             ),
             decoration: BoxDecoration(
-              color: Colors.red,
+              color: Colors.red[600],
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               count > 9 ? '9+' : count.toString(),
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontSize: 10,
+                fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
           ),
         )
-    ],
+      ],
     );
   }
 }

@@ -7,6 +7,10 @@ class UserProvider with ChangeNotifier {
   String? _role;
   String? _userId;
   String? _account;
+  String? _address;
+  String? _phone;
+  String? _name;
+  String? _email;
 
   // Getters
   String? get token => _token;
@@ -15,18 +19,26 @@ class UserProvider with ChangeNotifier {
   String? get role => _role;
   String? get userId => _userId;
   String? get account => _account;
+  String? get address => _address;
+  String? get phone => _phone; 
+  String? get name => _name;
+  String? get email => _email;
   
   // Combined status check
   bool get isLoggedIn => _token != null;
 
   // Main method to set all user data
-  void setUserData({
+   void setUserData({
     required String token,
     required Map<String, dynamic> userData,
     int? homeownerId,
     String? account,
     String? role,
     String? userId,
+    String? name,
+    String? email,
+    String? address,
+    String? phone,
   }) {
     _token = token;
     _user = userData;
@@ -34,6 +46,32 @@ class UserProvider with ChangeNotifier {
     _role = role;
     _userId = userId;
     _account = account;
+    _name = name ?? userData['name'];
+    _email = email ?? userData['email'];
+    _address = address ?? userData['address'];
+    _phone = phone ?? userData['phone'];
+    notifyListeners();
+  }
+
+
+   // Add these setters
+  void setName(String name) {
+    _name = name;
+    notifyListeners();
+  }
+
+  void setEmail(String email) {
+    _email = email;
+    notifyListeners();
+  }
+
+  void setAddress(String address) {
+    _address = address;
+    notifyListeners();
+  }
+
+  void setPhone(String phone) {
+    _phone = phone;
     notifyListeners();
   }
 
@@ -72,9 +110,9 @@ class UserProvider with ChangeNotifier {
   notifyListeners();
 }
 
-  // Helper to get user name safely
-  String? get userName => _user?['name'];
-
-  // Helper to get user email safely
+    String? get userName => _user?['name'];
   String? get userEmail => _user?['email'];
+  String? get userAddress => _user?['address'];
+  String? get userPhone => _user?['phone'];
+ 
 }

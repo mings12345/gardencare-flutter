@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:gardencare_app/providers/user_provider.dart';
+import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:gardencare_app/services/booking_service.dart';
 import 'package:gardencare_app/services/pusher_service.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -599,18 +602,37 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-         automaticallyImplyLeading: false, 
-        title: Text(
-          "My Appointments",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600, color: Colors.white,
-            
-          ),
-        ),
-        backgroundColor: Colors.green.shade700,
-        elevation: 0,
-        centerTitle: true, 
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          // Get the current user data from provider
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeownerScreen(
+                name: userProvider.name ?? 'Default Name',
+                email: userProvider.email ?? 'default@email.com',
+                address: userProvider.address ?? '',
+                phone: userProvider.phone ?? '',
+                account: userProvider.account ?? '',
+              ),
+            ),
+          );
+        },
       ),
+      title: Text(
+        "My Appointments",
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600, 
+          color: Colors.white,
+        ),
+      ),
+      backgroundColor: Colors.green.shade700,
+      elevation: 0,
+      centerTitle: true,
+    ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

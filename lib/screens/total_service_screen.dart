@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class TotalServiceScreen extends StatefulWidget {
   final String userRole;
 
-  TotalServiceScreen({required this.userRole});
+  const TotalServiceScreen({Key? key, required this.userRole}) : super(key: key);
 
   @override
   State<TotalServiceScreen> createState() => _TotalServiceScreenState();
@@ -50,262 +51,280 @@ class _TotalServiceScreenState extends State<TotalServiceScreen> {
     }
   }
 
-  // Convert HEX color code to Flutter's Color object
-  Color _hexToColor(String hex) {
-    return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+  @override
+  Widget build(BuildContext context) {
+    final serviceType = widget.userRole == 'gardener' ? 'Gardening' : 'Landscaping';
+    
+    return Scaffold(
+      appBar: AppBar(
+       title: Text(
+      '$serviceType Services',
+      style: GoogleFonts.poppins(
+        color: Colors.white,
+      ),
+    ),
+        backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () {
+              setState(() {
+                isLoading = true;
+              });
+              _fetchServices();
+            },
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.green[50]!,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: _buildContent(),
+      ),
+    );
   }
 
-  // Show Add Service Dialog
-  void _showAddServiceDialog() {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController priceController = TextEditingController();
-    final TextEditingController imageController = TextEditingController();
-    final TextEditingController descriptionController = TextEditingController();
+  Widget _buildContent() {
+    if (isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              strokeWidth: 3,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Loading services...',
+              style: TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add New Service'),
-          content: SingleChildScrollView(
+    if (errorMessage.isNotEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Colors.red[800],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                errorMessage,
+                style: TextStyle(
+                  color: Colors.red[800],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    isLoading = true;
+                    errorMessage = '';
+                  });
+                  _fetchServices();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (allServices.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.category_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No services available',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
+          ),
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12.0,
+                mainAxisSpacing: 16.0,
+                childAspectRatio: 0.7,
+              ),
+              itemCount: allServices.length,
+              itemBuilder: (context, index) {
+                final service = allServices[index];
+                return _buildServiceCard(service);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+Widget _buildServiceCard(dynamic service) {
+  return Card(
+    elevation: 3,
+    shadowColor: Colors.green.withOpacity(0.3),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(
+        color: Colors.green.withOpacity(0.2),
+        width: 1,
+      ),
+    ),
+    child: InkWell(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Selected: ${service['name']}'),
+            backgroundColor: Colors.green[700],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Image section with fixed height
+          Container(
+            height: MediaQuery.of(context).size.width * 0.3, // Reduced height
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.green[200]!,
+                  Colors.green[300]!,
+                ],
+              ),
+            ),
+            child: service['image'] != null && service['image'].toString().isNotEmpty
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: Image.network(
+                      service['image'],
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildPlaceholder();
+                      },
+                    ),
+                  )
+                : _buildPlaceholder(),
+          ),
+          
+          // Content section with adjusted padding
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10), // Reduced padding
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min, // Added to prevent expansion
               children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Service Name'),
-                ),
-                TextField(
-                  controller: priceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Price',
-                    hintText: 'Enter the price',
+                Text(
+                  service['name'],
+                  style: GoogleFonts.poppins(
+                    fontSize: 14, // Slightly reduced font size
+                    fontWeight: FontWeight.w600,
                   ),
-                  keyboardType: TextInputType.number,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                TextField(
-                  controller: imageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL',
-                    hintText: 'Enter image URL',
-                  ),
-                ),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    hintText: 'Enter service description',
+                const SizedBox(height: 6),
+                Text(
+                  '₱${service['price']}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.green[800],
                   ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog without action
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty &&
-                    priceController.text.isNotEmpty) {
-                  try {
-                    final String baseUrl = dotenv.get('BASE_URL');
-                    final response = await http.post(
-                      Uri.parse('$baseUrl/api/services'),
-                      headers: {'Content-Type': 'application/json'},
-                      body: json.encode({
-                        'name': nameController.text,
-                        'price': priceController.text,
-                        'image': imageController.text,
-                        'description': descriptionController.text,
-                        'type': widget.userRole == 'gardener' ? 'gardening' : 'landscaping'
-                      }),
-                    );
-
-                    if (response.statusCode == 201) {
-                      _fetchServices(); // Refresh the list
-                      Navigator.pop(context);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to add service: ${response.body}')),
-                      );
-                    }
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${e.toString()}')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Method to delete a service
-  void _deleteService(String serviceId) async {
-    try {
-      final String baseUrl = dotenv.get('BASE_URL');
-      final response = await http.delete(
-        Uri.parse('$baseUrl/api/services/$serviceId'),
-      );
-
-      if (response.statusCode == 200) {
-        _fetchServices(); // Refresh the list
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete service')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Total Services'),
-        backgroundColor: Colors.green,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage.isNotEmpty
-                    ? Center(child: Text(errorMessage))
-                    : Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: GridView.builder(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16.0,
-                            mainAxisSpacing: 16.0,
-                            childAspectRatio: 2 / 3,
-                          ),
-                          itemCount: allServices.length,
-                          itemBuilder: (context, index) {
-                            final service = allServices[index];
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: _hexToColor('#B2DDE1FF'),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  // Image with consistent size
-                                  SizedBox(
-                                    height: 120,
-                                    child: ClipRRect(
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(12),
-                                        topRight: Radius.circular(12),
-                                      ),
-                                      child: service['image'] != null && service['image'].toString().isNotEmpty
-                                          ? Image.network(
-                                              service['image'],
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(
-                                                  Icons.broken_image,
-                                                  size: 50,
-                                                  color: Colors.grey,
-                                                );
-                                              },
-                                            )
-                                          : const Icon(
-                                              Icons.image,
-                                              size: 50,
-                                              color: Colors.grey,
-                                            ),
-                                    ),
-                                  ),
-                                  // Service Name and Price
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          service['name'],
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '₱${service['price']}',
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Delete Button
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.redAccent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                      onPressed: () => _deleteService(service['_id']),
-                                      child: const Text(
-                                        'Delete',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-          ),
-          // Add Service Button
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextButton(
-              onPressed: _showAddServiceDialog,
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12.0,
-                  horizontal: 24.0,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Add New Service',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
         ],
+      ),
+    ),
+  );
+}
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(
+          Icons.eco,
+          size: 40,
+          color: Colors.green[300],
+        ),
       ),
     );
   }

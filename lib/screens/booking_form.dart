@@ -4,14 +4,46 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/screens/bookings_screen.dart';
-import 'package:gardencare_app/screens/homeowner_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:gardencare_app/providers/booking_provider.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class FormLayout extends StatelessWidget {
+  final Widget child;
+  
+  const FormLayout({Key? key, required this.child}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // For large screens, center the form with a max width
+    if (screenWidth > 600) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 800),
+          child: child,
+        ),
+      );
+    }
+    
+    // For small screens, use the full width
+    return child;
+  }
+}
+
 class BookingForm extends StatefulWidget {
+  final int? preselectedServiceId;
+  final String? serviceType;
+  
+  const BookingForm({
+    Key? key,
+    this.preselectedServiceId,
+    this.serviceType,
+  }) : super(key: key);
+
   @override
   _BookingFormState createState() => _BookingFormState();
 }
@@ -54,6 +86,21 @@ class _BookingFormState extends State<BookingForm> {
   @override
   void initState() {
     super.initState();
+    if (widget.serviceType != null) {
+    selectedType = widget.serviceType;
+  }
+  
+  _loadData().then((_) {
+    // After data is loaded, check if we have a preselected service
+    if (widget.preselectedServiceId != null) {
+      setState(() {
+        if (!selectedServiceIds.contains(widget.preselectedServiceId)) {
+          selectedServiceIds.add(widget.preselectedServiceId!);
+          updateTotalPrice();
+        }
+      });
+    }
+  });
     _loadData();
      _fetchWalletBalance(); 
   }
@@ -155,13 +202,14 @@ class _BookingFormState extends State<BookingForm> {
   }
 
   List<Map<String, dynamic>> getFilteredServices() {
-    if (selectedType == "Gardening") {
-      return services.where((service) => service["type"] == "Gardening").toList();
-    } else if (selectedType == "Landscaping") {
-      return services.where((service) => service["type"] == "Landscaping").toList();
-    }
-    return [];
+  final type = selectedType ?? widget.serviceType;
+  if (type == "Gardening") {
+    return services.where((service) => service["type"] == "Gardening").toList();
+  } else if (type == "Landscaping") {
+    return services.where((service) => service["type"] == "Landscaping").toList();
   }
+  return [];
+}
 
   void updateTotalPrice() {
     double sum = 0.0;
@@ -869,17 +917,7 @@ Future<void> submitBooking() async {
   );
 
   // Navigate to bookings screen and remove all previous routes
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (context) => HomeownerScreen(
-      name: '', // Pass your actual user data here
-      email: '',
-      address: '',
-      phone: '',
-      account: '',
-    )),
-    (route) => false,
-  );
+ 
   
   // Then navigate to bookings screen
   Navigator.push(
@@ -919,8 +957,12 @@ Future<void> submitBooking() async {
       iconTheme: const IconThemeData(color: Colors.white),
     ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: FormLayout(
+        child: Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.of(context).size.width > 600 ? 32.0 : 16.0,
+        vertical: 16.0,
+      ),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -945,11 +987,14 @@ Future<void> submitBooking() async {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildServiceTypeDropdown() {
+    return LayoutBuilder(
+      builder: (context, constraints){
     return DropdownButtonFormField<String>(
+      isExpanded: true,
       value: selectedType,
       onChanged: (value) {
         setState(() {
@@ -970,6 +1015,7 @@ Future<void> submitBooking() async {
       ),
       validator: (value) => value == null ? "Please select service type" : null,
     );
+   });
   }
 
   Widget _buildGardenerDropdown() {
@@ -1015,35 +1061,88 @@ Future<void> submitBooking() async {
   }
 
   Widget _buildServiceSelection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 16, bottom: 8),
-          child: Text(
-            "Select Services:",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final isLargeScreen = constraints.maxWidth > 600;
+      final filteredServices = getFilteredServices();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              top: isLargeScreen ? 24 : 16,
+              bottom: isLargeScreen ? 16 : 8,
+            ),
+            child: Text(
+              "Select Services:",
+              style: TextStyle(
+                fontSize: isLargeScreen ? 18 : 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-        ),
-        ...getFilteredServices().map((service) {
-          return CheckboxListTile(
-            title: Text("${service['name']} (₱${service['price']})"),
-            value: selectedServiceIds.contains(service['id']),
-            onChanged: (bool? value) {
-              setState(() {
-                if (value == true) {
-                  selectedServiceIds.add(service['id']);
-                } else {
-                  selectedServiceIds.remove(service['id']);
-                }
-                updateTotalPrice();
-              });
-            },
-          );
-        }).toList(),
-      ],
-    );
+          if (isLargeScreen)
+            // Grid layout for large screens
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2, // Two columns on large screens
+              childAspectRatio: 4, // Width to height ratio
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 8,
+              children: filteredServices.map((service) {
+                return _buildServiceCheckbox(service);
+              }).toList(),
+            )
+          else
+            // List layout for small screens
+            Column(
+              children: filteredServices.map((service) {
+                return _buildServiceCheckbox(service);
+              }).toList(),
+            ),
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildServiceCheckbox(Map<String, dynamic> service) {
+  // If this is the preselected service, ensure it's selected
+  final isPreselected = widget.preselectedServiceId == service['id'];
+  if (isPreselected && !selectedServiceIds.contains(service['id'])) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        selectedServiceIds.add(service['id']);
+        updateTotalPrice();
+      });
+    });
   }
+
+  return CheckboxListTile(
+    title: Text(
+      "${service['name']} (₱${service['price']})",
+      style: TextStyle(
+        fontSize: MediaQuery.of(context).size.width > 600 ? 16 : 14,
+      ),
+    ),
+    value: selectedServiceIds.contains(service['id']),
+    onChanged: (bool? value) {
+      setState(() {
+        if (value == true) {
+          selectedServiceIds.add(service['id']);
+        } else {
+          selectedServiceIds.remove(service['id']);
+        }
+        updateTotalPrice();
+      });
+    },
+    contentPadding: EdgeInsets.symmetric(
+      horizontal: MediaQuery.of(context).size.width > 600 ? 24 : 8,
+    ),
+  );
+}
 
   Widget _buildTotalPrice() {
     return Padding(
@@ -1150,190 +1249,265 @@ Future<void> submitBooking() async {
   }
 
 Widget _buildPaymentSection() {
-  return Card(
-    elevation: 4,
-    margin: EdgeInsets.symmetric(vertical: 16),
-    child: Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Payment Details",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 16),
-          
-          // Payment Type Selection
-          Text("Payment Type:", style: TextStyle(fontWeight: FontWeight.bold)),
-          Row(
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final isLargeScreen = constraints.maxWidth > 600;
+      final padding = isLargeScreen ? 24.0 : 16.0;
+      final titleFontSize = isLargeScreen ? 20.0 : 18.0;
+      final textFontSize = isLargeScreen ? 16.0 : 14.0;
+      final smallTextFontSize = isLargeScreen ? 14.0 : 12.0;
+
+      return Card(
+        elevation: 4,
+        margin: EdgeInsets.symmetric(
+          vertical: isLargeScreen ? 20 : 16,
+          horizontal: isLargeScreen ? 8 : 0,
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: RadioListTile<String>(
-                  title: Text("Full Payment"),
-                  value: "Full Payment",
-                  groupValue: paymentType,
-                  onChanged: (value) {
-                    setState(() {
-                      paymentType = value!;
-                      calculatePaymentAmounts();
-                    });
-                  },
+              Text(
+                "Payment Details",
+                style: TextStyle(
+                  fontSize: titleFontSize,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              Expanded(
-                child: RadioListTile<String>(
-                  title: Text("Down Payment (30%)"),
-                  value: "Down Payment",
-                  groupValue: paymentType,
-                  onChanged: (value) {
-                    setState(() {
-                      paymentType = value!;
-                      calculatePaymentAmounts();
-                    });
-                  },
+              SizedBox(height: isLargeScreen ? 20 : 16),
+              
+              // Payment Type Selection
+              Text(
+                "Payment Type:", 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: textFontSize,
+                ),
+              ),
+              if (isLargeScreen)
+                Row(
+                  children: [
+                    Expanded(child: _buildPaymentRadio("Full Payment", textFontSize)),
+                    SizedBox(width: 16),
+                    Expanded(child: _buildPaymentRadio("Down Payment (30%)", textFontSize)),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    _buildPaymentRadio("Full Payment", textFontSize),
+                    _buildPaymentRadio("Down Payment (30%)", textFontSize),
+                  ],
+                ),
+              
+              // Payment Method (readonly)
+              Padding(
+                padding: EdgeInsets.only(top: padding / 2),
+                child: TextFormField(
+                  readOnly: true,
+                  initialValue: "GCare Wallet",
+                  decoration: InputDecoration(
+                    labelText: "Payment Method",
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: isLargeScreen ? 18 : 14,
+                      horizontal: 16,
+                    ),
+                    labelStyle: TextStyle(fontSize: textFontSize),
+                  ),
+                  style: TextStyle(fontSize: textFontSize),
+                ),
+              ),
+              
+              // Payment Summary
+              Padding(
+                padding: EdgeInsets.only(top: padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Payment Summary:", 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: textFontSize,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    _buildPaymentRow(
+                      "Total Service Cost:", 
+                      "₱${totalPrice.toStringAsFixed(2)}",
+                      textFontSize,
+                    ),
+                    Divider(thickness: 1),
+                    _buildPaymentRow(
+                      paymentType == "Full Payment" 
+                          ? "Amount to Pay:" 
+                          : "Down Payment Amount (30%):", 
+                      "₱${downPaymentAmount.toStringAsFixed(2)}",
+                      textFontSize,
+                      isBold: true,
+                    ),
+                    if (paymentType == "Down Payment") ...[
+                      SizedBox(height: 4),
+                      _buildPaymentRow(
+                        "Remaining Balance:", 
+                        "₱${remainingBalance.toStringAsFixed(2)}",
+                        textFontSize,
+                        isBold: true,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Note: Remaining balance will be automatically deducted to your account after completion.",
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: smallTextFontSize,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
           ),
-          
-          // Payment Method (readonly)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: TextFormField(
-              readOnly: true,
-              initialValue: "GCare Wallet",
-              decoration: InputDecoration(
-                labelText: "Payment Method",
-                border: OutlineInputBorder(),
-              ),
-            ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildPaymentRadio(String value, double fontSize) {
+  return RadioListTile<String>(
+    title: Text(
+      value,
+      style: TextStyle(fontSize: fontSize),
+    ),
+    value: value.contains("Full") ? "Full Payment" : "Down Payment",
+    groupValue: paymentType,
+    onChanged: (value) {
+      setState(() {
+        paymentType = value!;
+        calculatePaymentAmounts();
+      });
+    },
+    contentPadding: EdgeInsets.zero,
+    dense: true,
+  );
+}
+
+Widget _buildPaymentRow(String label, String value, double fontSize, {bool isBold = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           ),
-          
-          // Payment Summary
-          Padding(
-            padding: const EdgeInsets.only(top: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Payment Summary:", style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Total Service Cost:"),
-                    Text("₱${totalPrice.toStringAsFixed(2)}"),
-                  ],
-                ),
-                Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(paymentType == "Full Payment" 
-                        ? "Amount to Pay:" 
-                        : "Down Payment Amount (30%):", 
-                        style: TextStyle(fontWeight: FontWeight.bold)
-                    ),
-                    Text("₱${downPaymentAmount.toStringAsFixed(2)}", 
-                        style: TextStyle(fontWeight: FontWeight.bold)
-                    ),
-                  ],
-                ),
-                if (paymentType == "Down Payment") ...[
-                  SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Remaining Balance:", style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text("₱${remainingBalance.toStringAsFixed(2)}", style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Note: Remaining balance will be automatically deducted to your account after completion.",
-                    style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
-                  ),
-                ],
-              ],
-            ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }
  
  Widget _buildSubmitButton() {
-  bool hasSufficientBalance = walletBalance >= downPaymentAmount;
-  bool hasAccount = Provider.of<UserProvider>(context, listen: false).account != null && 
-                    Provider.of<UserProvider>(context, listen: false).account!.isNotEmpty;
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final isLargeScreen = constraints.maxWidth > 600;
+      final bool hasSufficientBalance = walletBalance >= downPaymentAmount;
+      final bool hasAccount = Provider.of<UserProvider>(context, listen: false).account != null && 
+                            Provider.of<UserProvider>(context, listen: false).account!.isNotEmpty;
 
-  if (!hasAccount) {
-    return ElevatedButton(
-      onPressed: _showReceipt,
-      style: ElevatedButton.styleFrom(
+      // Common button style
+      final ButtonStyle greenButtonStyle = ElevatedButton.styleFrom(
         backgroundColor: Colors.green,
-        padding: EdgeInsets.symmetric(vertical: 16),
-      ),
-      child: Text(
-        "PROCEED PAYMENT",
-        style: TextStyle(fontSize: 16),
-      ),
-    );
-  }
+        padding: EdgeInsets.symmetric(
+          vertical: isLargeScreen ? 18 : 16,
+          horizontal: isLargeScreen ? 32 : 16,
+        ),
+        textStyle: TextStyle(
+          fontSize: isLargeScreen ? 18 : 16,
+          fontWeight: FontWeight.bold,
+        ),
+      );
 
-  if (!hasSufficientBalance) {
-    return Column(
-      children: [
-        Text(
-          "Insufficient wallet balance",
-          style: TextStyle(color: Colors.red, fontSize: 16),
+      final ButtonStyle orangeButtonStyle = ElevatedButton.styleFrom(
+        backgroundColor: Colors.orange,
+        padding: EdgeInsets.symmetric(
+          vertical: isLargeScreen ? 16 : 12,
+          horizontal: isLargeScreen ? 24 : 16,
         ),
-        SizedBox(height: 10),
-        ElevatedButton(
-        onPressed: _showCashInDialog,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange,
-          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16), 
+        textStyle: TextStyle(
+          fontSize: isLargeScreen ? 16 : 14,
+          fontWeight: FontWeight.bold,
         ),
-        child: Text(
-          "CASH IN NOW",
-          style: TextStyle(fontSize: 14),
-        ),
-      ),
-      ],
-    );
-  }
+      );
 
-  return ElevatedButton(
-    onPressed: ((_isLoading || isProcessingPayment) ? null : _showReceipt),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.green,
-      padding: EdgeInsets.symmetric(vertical: 16),
-    ),
-    child: (_isLoading || isProcessingPayment)
-        ? Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
+      if (!hasAccount) {
+        return ElevatedButton(
+          onPressed: _showReceipt,
+          style: greenButtonStyle,
+          child: Text("PROCEED PAYMENT"),
+        );
+      }
+
+      if (!hasSufficientBalance) {
+        return Column(
+          children: [
+            Text(
+              "Insufficient wallet balance",
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: isLargeScreen ? 18 : 16,
               ),
-              SizedBox(width: 10),
-              Text(
-                isProcessingPayment ? "PROCESSING PAYMENT..." : "CONFIRMING BOOKING...",
-                style: TextStyle(fontSize: 16),
-              ),
-            ],
-          )
-        : Text(
-            "PROCEED PAYMENT",
-            style: TextStyle(fontSize: 16),
-          ),
+            ),
+            SizedBox(height: isLargeScreen ? 16 : 10),
+            ElevatedButton(
+              onPressed: _showCashInDialog,
+              style: orangeButtonStyle,
+              child: Text("CASH IN NOW"),
+            ),
+          ],
+        );
+      }
+
+      return ElevatedButton(
+        onPressed: ((_isLoading || isProcessingPayment) ? null : _showReceipt),
+        style: greenButtonStyle,
+        child: (_isLoading || isProcessingPayment)
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: isLargeScreen ? 24 : 20,
+                    height: isLargeScreen ? 24 : 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  SizedBox(width: isLargeScreen ? 16 : 10),
+                  Text(
+                    isProcessingPayment ? "PROCESSING PAYMENT..." : "CONFIRMING BOOKING...",
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 16 : 14,
+                    ),
+                  ),
+                ],
+              )
+            : Text("PROCEED PAYMENT"),
+      );
+    },
   );
 }
 }

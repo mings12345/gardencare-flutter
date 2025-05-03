@@ -8,8 +8,10 @@ import 'package:gardencare_app/screens/calendar_screen.dart';
 import 'package:gardencare_app/screens/earnigs_summary_screen.dart';
 import 'package:gardencare_app/screens/feedback_screen.dart';
 import 'package:gardencare_app/screens/chat_list_screen.dart';
+import 'package:gardencare_app/screens/login_screen.dart';
 import 'package:gardencare_app/screens/provider_profile_screen.dart';
 import 'package:gardencare_app/services/booking_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gardencare_app/screens/total_booking.dart';
@@ -533,8 +535,14 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Service Provider Dashboard'),
+      appBar:  AppBar(
+        title: Text(
+          'Service Provider Dashboard',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 19,
+          ),
+        ),
         backgroundColor: Colors.green,
       ),
       drawer: Drawer(
@@ -658,33 +666,80 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Confirm Logout'),
-                    content: const Text('Are you sure you want to logout?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          SharedPreferences prefs = await SharedPreferences.getInstance();
-                          await prefs.clear();
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirm Logout'),
+                  content: const Text('Are you sure you want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final token = await AuthService.getToken();
+                        print("Retrieved Token: $token");
+
+                        if (token == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("No token found. Please log in again."),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
                           Navigator.pop(context);
-                          Navigator.pushReplacementNamed(context, '/');
-                        },
-                        child: const Text('Logout'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                          return;
+                        }
+
+                        try {
+                          final String baseUrl = dotenv.get('BASE_URL');
+                          final response = await http.post(
+                            Uri.parse('$baseUrl/api/logout'),
+                            headers: {
+                              'Authorization': 'Bearer $token',
+                            },
+                          );
+
+                          print("Response Status Code: ${response.statusCode}");
+                          print("Response Body: ${response.body}");
+
+                          if (response.statusCode == 200) {
+                            await AuthService.clearToken();
+                            Navigator.pop(context); // Close dialog
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => LoginScreen()),
+                            );
+                          } else {
+                            Navigator.pop(context); // Close dialog
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          Navigator.pop(context); // Close dialog
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Error: $e"),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           ],
         ),
       ),

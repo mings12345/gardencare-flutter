@@ -11,6 +11,7 @@ class LandscapingServiceDetails extends StatelessWidget {
   final String price;
   final String serviceType;
   final AuthService authService = AuthService();
+  final Map<String, dynamic> service; 
 
    LandscapingServiceDetails({
     Key? key,
@@ -19,6 +20,7 @@ class LandscapingServiceDetails extends StatelessWidget {
     required this.serviceImage,
     required this.price,
     required this.serviceType,
+    required this.service,
   }) : super(key: key);
 
   void _navigateToProviderDetails(BuildContext context, User provider) {
@@ -138,32 +140,35 @@ class LandscapingServiceDetails extends StatelessWidget {
             
             // Book Service Button with gradient
             SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.green[800],
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.green[800],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
+                shadowColor: Colors.green.withOpacity(0.3),
+              ),
+              onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BookingForm(
+                    preselectedServiceId: service['id'], // Use the actual service ID
+                    serviceType: serviceType,
                   ),
-                  elevation: 3,
-                  shadowColor: Colors.green.withOpacity(0.3),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BookingForm(),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Book This Service',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
+              );
+            },
+              child: const Text(
+                'Book This Service',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
             ),
+          ),
             const SizedBox(height: 32),
             
             // Available Service Providers Section Header
