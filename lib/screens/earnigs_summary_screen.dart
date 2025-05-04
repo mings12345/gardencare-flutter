@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gardencare_app/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 
@@ -61,39 +62,42 @@ class _EarningsSummaryScreenState extends State<EarningsSummaryScreen> {
   }
 
   List<Map<String, dynamic>> _getFilteredEarnings() {
-    final now = DateTime.now();
-    
-    switch (selectedTimeframe) {
-      case 'Today':
-        final today = DateFormat('yyyy-MM-dd').format(now);
-        return earnings.where((e) => 
-          e['completed_at'] != null && 
-          e['completed_at'].toString().startsWith(today)
-        ).toList();
-      
-      case 'This Week':
-        final weekStart = now.subtract(Duration(days: now.weekday - 1));
-        return earnings.where((e) {
-          if (e['completed_at'] == null) return false;
-          final completedDate = DateTime.tryParse(e['completed_at'].toString());
-          if (completedDate == null) return false;
-          return completedDate.isAfter(weekStart);
-        }).toList();
-      
-      case 'This Month':
-        final monthStart = DateTime(now.year, now.month, 1);
-        return earnings.where((e) {
-          if (e['completed_at'] == null) return false;
-          final completedDate = DateTime.tryParse(e['completed_at'].toString()) ;
-          if (completedDate == null) return false;
-          return completedDate.isAfter(monthStart);
-        }).toList();
-      
-      case 'All Time':
-      default:
-        return earnings;
-    }
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final todayEnd = todayStart.add(Duration(days: 1));
+
+  switch (selectedTimeframe) {
+    case 'Today':
+      return earnings.where((e) {
+        if (e['completed_at'] == null) return false;
+        final completedDate = DateTime.tryParse(e['completed_at'].toString());
+        if (completedDate == null) return false;
+        return completedDate.isAfter(todayStart) && completedDate.isBefore(todayEnd);
+      }).toList();
+
+    case 'This Week':
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      return earnings.where((e) {
+        if (e['completed_at'] == null) return false;
+        final completedDate = DateTime.tryParse(e['completed_at'].toString());
+        if (completedDate == null) return false;
+        return completedDate.isAfter(weekStart);
+      }).toList();
+
+    case 'This Month':
+      final monthStart = DateTime(now.year, now.month, 1);
+      return earnings.where((e) {
+        if (e['completed_at'] == null) return false;
+        final completedDate = DateTime.tryParse(e['completed_at'].toString());
+        if (completedDate == null) return false;
+        return completedDate.isAfter(monthStart);
+      }).toList();
+
+    case 'All Time':
+    default:
+      return earnings;
   }
+}
 
   double _getFilteredTotal() {
     final filteredEarnings = _getFilteredEarnings();
@@ -110,9 +114,23 @@ class _EarningsSummaryScreenState extends State<EarningsSummaryScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Earnings Summary'),
-        backgroundColor: Colors.green,
+      iconTheme: const IconThemeData(color: Colors.white), 
+      title: Text(
+        'Earnings Summary',
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: 20,
+        ),
       ),
+      backgroundColor: Colors.green[800],
+      centerTitle: true,
+      elevation: 2,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(15),
+        ),
+      ),
+    ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

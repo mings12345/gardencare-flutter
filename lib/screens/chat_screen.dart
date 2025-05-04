@@ -196,6 +196,11 @@ class ChatScreenState extends State<ChatScreen> {
   ),
   backgroundColor: Colors.green[700], // Dark green
   elevation: 0,
+  shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
   iconTheme: IconThemeData(color: Colors.white),
   actions: [
     IconButton(

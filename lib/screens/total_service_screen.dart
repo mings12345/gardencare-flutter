@@ -57,6 +57,7 @@ class _TotalServiceScreenState extends State<TotalServiceScreen> {
     
     return Scaffold(
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
        title: Text(
       '$serviceType Services',
       style: GoogleFonts.poppins(

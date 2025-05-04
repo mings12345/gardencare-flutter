@@ -154,7 +154,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.green[700],
+        backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
         iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(

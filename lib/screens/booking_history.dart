@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -86,14 +87,35 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Booking History'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Recent Bookings'),
-              Tab(text: 'Past Bookings'),
-            ],
+        iconTheme: const IconThemeData(color: Colors.white), // White leading icon
+        title: Text(
+          'Booking History',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
         ),
+        backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
+        bottom: TabBar(
+          labelStyle: GoogleFonts.poppins( // Style for selected tab
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          unselectedLabelStyle: GoogleFonts.poppins(), // Style for unselected tabs
+          tabs: const [
+            Tab(text: 'Recent Bookings'),
+            Tab(text: 'Past Bookings'),
+          ],
+        ),
+      ),
         body: FutureBuilder<Map<String, dynamic>>(
           future: _bookingsFuture,
           builder: (context, snapshot) {

@@ -277,6 +277,7 @@ String _formatDate(String dateString) {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+      iconTheme: const IconThemeData(color: Colors.white), // Makes back/leading icon white
       title: Text(
         widget.userRole == 'gardener' ? 'My Bookings' : 'My Bookings',
         style: GoogleFonts.poppins(
@@ -284,7 +285,14 @@ String _formatDate(String dateString) {
           fontSize: 20,
         ),
       ),
-      backgroundColor: Colors.green,
+       backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
     ),
       body: RefreshIndicator(
         onRefresh: _refreshBookings,

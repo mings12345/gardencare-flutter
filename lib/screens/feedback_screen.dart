@@ -76,6 +76,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           'Homeowner Feedback',
           style: GoogleFonts.poppins(
@@ -83,8 +84,14 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             fontSize: 19,
           ),
         ),
-        backgroundColor: Colors.green.shade700,
-        elevation: 0,
+        backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

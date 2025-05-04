@@ -113,7 +113,14 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           color: Colors.white,
         ),
       ),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
           automaticallyImplyLeading: false,
         )
           : null,

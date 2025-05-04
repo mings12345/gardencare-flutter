@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BookingDetailsScreen extends StatefulWidget {
   final Map<String, String> booking;
@@ -44,9 +45,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Booking Details'),
-        backgroundColor: Colors.green,
+      iconTheme: const IconThemeData(color: Colors.white), // Makes the leading icon white
+      title: Text(
+        'Booking Details',
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: 20,
+        ),
       ),
+       backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
+    ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

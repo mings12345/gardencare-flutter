@@ -629,9 +629,14 @@ Widget _buildPaymentSummary(Map<String, dynamic> booking, List<dynamic> payments
           color: Colors.white,
         ),
       ),
-      backgroundColor: Colors.green.shade700,
-      elevation: 0,
-      centerTitle: true,
+      backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
     ),
       body: Container(
         decoration: BoxDecoration(

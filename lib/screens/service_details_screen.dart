@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'booking_form.dart';
 import 'package:gardencare_app/auth_service.dart';
 import 'package:gardencare_app/models/user.dart';
@@ -38,13 +39,19 @@ class ServiceDetailsScreen extends StatelessWidget {
       appBar: AppBar(
       title: Text(
         serviceName,
-        style: const TextStyle(
+        style: GoogleFonts.poppins(
           color: Colors.white,
-          fontWeight: FontWeight.bold,
+          fontSize: 20,
         ),
       ),
       backgroundColor: Colors.green[800],
-      elevation: 0,
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
       iconTheme: const IconThemeData(color: Colors.white),
     ),
       body: SingleChildScrollView(

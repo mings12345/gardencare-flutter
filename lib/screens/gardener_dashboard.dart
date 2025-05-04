@@ -534,7 +534,14 @@ void _openWithdrawDialog() {
           fontSize: 20,
         ),
       ),
-      backgroundColor: Colors.green,
+      backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
     ),
       drawer: Drawer(
         child: ListView(

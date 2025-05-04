@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'service_details_screen.dart';
 import 'booking_form.dart';
 import 'package:http/http.dart' as http;
@@ -68,16 +69,22 @@ class _GardeningScreenState extends State<GardeningScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
      appBar: AppBar(
-      title: const Text(
+      title: Text(
         "Gardening Services",
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           color: Colors.white,
-          fontWeight: FontWeight.bold,
+          fontSize: 20,
         ),
       ),
-      backgroundColor: Colors.green,
-      elevation: 0,
-       iconTheme: const IconThemeData(color: Colors.white),
+      backgroundColor: Colors.green[800],
+        centerTitle: true,
+        elevation: 2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(15),
+          ),
+        ),
+      iconTheme: const IconThemeData(color: Colors.white),
     ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
