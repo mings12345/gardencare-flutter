@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gardencare_app/providers/user_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../auth_service.dart';
 import 'gardener_dashboard.dart';
 import 'homeowner_screen.dart';
@@ -21,6 +22,39 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedCredentials();
+  }
+
+  Future<void> _loadRememberedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _rememberMe = prefs.getBool('rememberMe') ?? false;
+      if (_rememberMe) {
+        _emailController.text = prefs.getString('email') ?? '';
+        _passwordController.text = prefs.getString('password') ?? '';
+      }
+    });
+  }
+
+  Future<void> _saveCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setBool('rememberMe', true);
+      await prefs.setString('email', _emailController.text);
+      await prefs.setString('password', _passwordController.text);
+    } else {
+      await prefs.remove('rememberMe');
+      await prefs.remove('email');
+      await prefs.remove('password');
+    }
+  }
+
+  
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
@@ -43,6 +77,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           } else {
+            // Save credentials if Remember Me is checked
+            await _saveCredentials();
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Welcome ${user.name}! Login successful.'),
@@ -275,22 +312,57 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 8),
-                      // Forgot Password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            // Navigate to Forgot Password screen
-                          },
-                          child: Text(
-                            'Forgot Password?',
-                            style: TextStyle(
-                              color: Colors.green[700],
-                              fontWeight: FontWeight.w500,
+                      // Remember Me and Forgot Password Row
+                      Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: Row(
+                        children: [
+                          // Remember Me Checkbox with reduced spacing
+                          Transform.scale(
+                            scale: 0.9,
+                            child: Checkbox(
+                              value: _rememberMe,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rememberMe = value ?? false;
+                                });
+                              },
+                              activeColor: Colors.green[700],
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                           ),
-                        ),
+                          Flexible(
+                            child: Text(
+                              'Remember Me',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Flexible(
+                            child: TextButton(
+                              onPressed: () {
+                                // Navigate to Forgot Password screen
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'Forgot Password?',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
                       const SizedBox(height: 16),
                       // Login Button
                       ElevatedButton(
