@@ -406,8 +406,22 @@ class MessageBubble extends StatelessWidget {
     Key? key,
   }) : super(key: key);
 
+  String _formatTimestamp(String timestamp) {
+    try {
+      final dateTime = DateTime.parse(timestamp).toLocal();
+      final hour = dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
+      final period = dateTime.hour < 12 ? 'AM' : 'PM';
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+      return '$hour:$minute $period';
+    } catch (e) {
+      return timestamp; // Return original if parsing fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final formattedTime = _formatTimestamp(timestamp);
+    
     return Padding(
       padding: EdgeInsets.symmetric(
         vertical: 4,
@@ -454,7 +468,7 @@ class MessageBubble extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  timestamp,
+                  formattedTime, // Use the formatted time here
                   style: TextStyle(
                     color: isMe ? Colors.white70 : Colors.green[700],
                     fontSize: isLargeScreen ? 12 : 10,

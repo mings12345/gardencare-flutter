@@ -340,7 +340,7 @@ class _BookingNotificationsScreenState extends State<BookingNotificationsScreen>
         if (remainingBalance > 0) ...[
           const SizedBox(height: 8),
           Text(
-            'Note: Remaining balance of ₱${remainingBalance} will be automatically deducted to your account after completion.',
+            'Note: Remaining balance of ₱${remainingBalance} will be automatically added to your account after completion.',
             style: TextStyle(
               color: Colors.orange.shade700,
               fontStyle: FontStyle.italic,
