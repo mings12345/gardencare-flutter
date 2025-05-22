@@ -167,41 +167,32 @@ class AuthService {
   }
 
   Future<Map<String, String>> fetchProfileData(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
 
-    if (token == null) {
-      throw Exception('No token found. Please log in again.');
-    }
-
-    final url = '$baseUrl/api/profile/$userId';
-    print('Request URL: $url'); // Debugging line
-    print('Authorization Token: $token'); // Debugging line
-    print('User ID: $userId'); // Debugging line
-
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    print('Response Status Code: ${response.statusCode}'); // Debugging line
-    print('Response Body: ${response.body}'); // Debugging line
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return {
-        'name': data['name'] ?? '',
-        'email': data['email'] ?? '',
-        'phone': data['phone'] ?? '',
-        'address': data['address'] ?? '',
-        'account': data['account'] ?? '',
-      };
-    } else if (response.statusCode == 404) {
-      throw Exception('Profile not found. Please check the user ID.');
-    } else {
-      throw Exception('Failed to fetch profile data: ${response.body}');
-    }
+  if (token == null) {
+    throw Exception('No token found. Please log in again.');
   }
+
+  final response = await http.get(
+    Uri.parse('$baseUrl/api/profile/$userId'),
+    headers: {'Authorization': 'Bearer $token'},
+  );
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    return {
+      'name': data['name'] ?? '',
+      'email': data['email'] ?? '',
+      'phone': data['phone'] ?? '',
+      'address': data['address'] ?? '',
+      'account': data['account'] ?? '',
+      'profile_image_url': data['profile_image_url'] ?? '', // Add this line
+    };
+  } else {
+    throw Exception('Failed to fetch profile data: ${response.body}');
+  }
+}
 
   Future<User?> register(
     String name,

@@ -74,63 +74,90 @@ class _TotalBookingScreenState extends State<TotalBookingScreen> {
   } 
 
        Future<void> _markAsComplete(String bookingId) async {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            content: Row(
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 20),
-                Text("Updating status..."),
-              ],
+  // First show confirmation dialog
+  bool confirm = await showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text("Confirm Completion"),
+        content: Text("Are you sure you want to mark this booking as completed?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade700,
             ),
-          );
-        },
+            child: Text("Confirm", style: TextStyle(color: Colors.white)),
+          ),
+        ],
       );
+    },
+  );
 
-         final response = await _pusherService.updateBookingStatus(
-        bookingId, 
-        'completed'
-      );
+  // If user didn't confirm, return without doing anything
+  if (confirm != true) return;
 
-         Navigator.of(context).pop();
-
-      if (response['status'] == 'completed') {
-        // Update local UI
-        setState(() {
-          final index = bookings.indexWhere((b) => b['id'] == bookingId);
-          if (index != -1) {
-            bookings[index]['status'] = 'Completed';
-          }
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Booking marked as completed"),
-            backgroundColor: Colors.green,
+  try {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text("Updating status..."),
+            ],
           ),
         );
-      } else {
-        throw Exception('Server did not confirm status update');
-      }
-    } catch (e) {
-      // Close loading dialog if it's still open
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
+      },
+    );
+
+    final response = await _pusherService.updateBookingStatus(
+      bookingId, 
+      'completed'
+    );
+
+    Navigator.of(context).pop(); // Close loading dialog
+
+    if (response['status'] == 'completed') {
+      // Update local UI
+      setState(() {
+        final index = bookings.indexWhere((b) => b['id'] == bookingId);
+        if (index != -1) {
+          bookings[index]['status'] = 'Completed';
+        }
+      });
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Failed to update booking status: $e"),
-          backgroundColor: Colors.red,
+          content: Text("Booking marked as completed"),
+          backgroundColor: Colors.green,
         ),
       );
+    } else {
+      throw Exception('Server did not confirm status update');
     }
+  } catch (e) {
+    // Close loading dialog if it's still open
+    if (Navigator.canPop(context)) {
+      Navigator.of(context).pop();
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Failed to update booking status: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   Future<void> _fetchBookings() async {
     try {

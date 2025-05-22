@@ -636,10 +636,16 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
               title: const Text('Calendar'),
               onTap: () {
                 Navigator.pop(context);
+                final user = Provider.of<UserProvider>(context, listen: false);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const CalendarScreen(userRole: 'service_provider', loggedInUser: ''),
+                    builder: (context) => CalendarScreen(
+                      userRole: 'service_provider', 
+                      loggedInUser: user.name ?? '',
+                      userId: (user.userId is int) ? user.userId as int : int.tryParse(user.userId.toString()) ?? 0,
+                      authToken: user.token ?? '',
+                    ),
                   ),
                 );
               },

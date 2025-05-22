@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class CalendarScreen extends StatefulWidget {
-  final String userRole; // 'homeowner', 'gardener', or 'service_provider'
-  final String loggedInUser; // Name or ID of the logged-in user
+  final String userRole;
+  final String loggedInUser;
+  final int userId;
+  final String authToken; // Add auth token for authenticated requests
 
   const CalendarScreen({
     Key? key,
     required this.userRole,
     required this.loggedInUser,
+    required this.userId,
+    required this.authToken,
   }) : super(key: key);
 
   @override
@@ -18,41 +27,91 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  Map<DateTime, List<Map<String, dynamic>>> _events = {};
+  bool _isLoading = false;
+  String _errorMessage = '';
 
-  // Sample events for demonstration
-  final Map<DateTime, List<Map<String, String>>> _events = {
-    DateTime.utc(2025, 1, 25): [
-      {'time': '10:00 AM', 'client': 'John Doe', 'service': 'Lawn Mowing', 'gardener': 'Alice'},
-      {'time': '02:00 PM', 'client': 'Jane Smith', 'service': 'Garden Cleaning', 'gardener': 'Bob'},
-    ],
-    DateTime.utc(2025, 1, 26): [
-      {'time': '11:00 AM', 'client': 'Alice Brown', 'service': 'Tree Pruning', 'gardener': 'Charlie'},
-    ],
-    DateTime.utc(2025, 1, 27): [
-      {'time': '09:00 AM', 'client': 'John Doe', 'service': 'Weeding', 'gardener': 'Alice'},
-    ],
-  };
+  @override
+  void initState() {
+    super.initState();
+    _selectedDay = _focusedDay;
+    _fetchBookingsForMonth(_focusedDay);
+  }
 
-  // Availability data
-  final Map<DateTime, List<Map<String, String>>> _availability = {};
+  Future<void> _fetchBookingsForMonth(DateTime month) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
-  // Get filtered events based on user role and logged-in user
-  List<Map<String, String>> _getFilteredEventsForDay(DateTime date) {
-    final events = _events[DateTime.utc(date.year, date.month, date.day)] ?? [];
+    try {
+      final firstDay = DateTime(month.year, month.month, 1);
+      final lastDay = DateTime(month.year, month.month + 1, 0);
+      
+  final String baseUrl = dotenv.get('BASE_URL'); 
+      
+      final url = Uri.parse(
+        '$baseUrl/api/bookings/by-date-range/${widget.userId}?start_date=${DateFormat('yyyy-MM-dd').format(firstDay)}&end_date=${DateFormat('yyyy-MM-dd').format(lastDay)}',
+      );
 
-    switch (widget.userRole) {
-      case 'homeowner':
-        // Homeowner sees their own bookings (filter by client name)
-        return events.where((event) => event['client'] == widget.loggedInUser).toList();
-      case 'gardener':
-        // Gardener sees their assigned tasks (filter by gardener name)
-        return events.where((event) => event['gardener'] == widget.loggedInUser).toList();
-      case 'service_provider':
-        // Service provider sees all bookings (no filter)
-        return events;
-      default:
-        return [];
+      debugPrint('Fetching bookings from: $url'); // Debug print
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${widget.authToken}', // Add auth header
+        },
+      );
+
+      debugPrint('Response status: ${response.statusCode}'); // Debug print
+      debugPrint('Response body: ${response.body}'); // Debug print
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final bookings = data['bookings'] as List;
+
+        setState(() {
+          _events = {};
+          for (var booking in bookings) {
+            try {
+              final date = DateTime.parse(booking['date']).toLocal();
+              final dateKey = DateTime.utc(date.year, date.month, date.day);
+
+              _events.putIfAbsent(dateKey, () => []).add({
+                'time': booking['time'] ?? 'N/A',
+                'client': booking['homeowner']?['name'] ?? 'N/A',
+                'service': booking['services']?.map((s) => s['name']).join(', ') ?? 'N/A',
+                'gardener': booking['gardener']?['name'] ?? 'N/A',
+                'service_provider': booking['service_provider']?['name'] ?? 'N/A',
+                'status': booking['status'] ?? 'N/A',
+                'address': booking['address'] ?? 'N/A',
+                'special_instructions': booking['special_instructions'] ?? '',
+              });
+            } catch (e) {
+              debugPrint('Error processing booking: $e');
+            }
+          }
+        });
+      } else {
+        throw Exception(
+            'Failed to load bookings. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to fetch bookings: ${e.toString()}';
+      });
+      debugPrint('Error fetching bookings: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
+  }
+
+  List<Map<String, dynamic>> _getFilteredEventsForDay(DateTime date) {
+    final events = _events[DateTime.utc(date.year, date.month, date.day)] ?? [];
+    return events;
   }
 
   @override
@@ -75,6 +134,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 _focusedDay = focusedDay;
               });
             },
+            onPageChanged: (focusedDay) {
+              _focusedDay = focusedDay;
+              _fetchBookingsForMonth(focusedDay);
+            },
             calendarFormat: CalendarFormat.month,
             headerStyle: const HeaderStyle(formatButtonVisible: false),
             calendarStyle: const CalendarStyle(
@@ -92,193 +155,174 @@ class _CalendarScreenState extends State<CalendarScreen> {
             },
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: _selectedDay == null
-                ? const Center(
-                    child: Text(
-                      'Select a date to see events.',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  )
-                : _buildEventList(),
-          ),
+          if (_errorMessage.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                _errorMessage,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Expanded(
+                  child: _selectedDay == null
+                      ? const Center(
+                          child: Text(
+                            'Select a date to see events.',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        )
+                      : _buildEventList(),
+                ),
         ],
       ),
-      floatingActionButton: widget.userRole != 'homeowner' && _selectedDay != null
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FloatingActionButton(
-                  onPressed: () => _showAddEventDialog(_selectedDay!),
-                  backgroundColor: Colors.green,
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(height: 16),
-                FloatingActionButton(
-                  onPressed: () => _showSetAvailabilityDialog(_selectedDay!),
-                  backgroundColor: Colors.blue,
-                  child: const Icon(Icons.schedule),
-                ),
-              ],
-            )
-          : null,
     );
   }
 
   Widget _buildEventList() {
     final events = _getFilteredEventsForDay(_selectedDay!);
-    final availability = _availability[DateTime.utc(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)] ?? [];
 
-    if (events.isEmpty && availability.isEmpty) {
-      return const Center(
+    if (events.isEmpty) {
+      return Center(
         child: Text(
-          'No events or availability for this day.',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+          'No bookings for this day',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
         ),
       );
     }
 
     return ListView(
-      children: [
-        if (availability.isNotEmpty)
-          ...availability.map((availability) => Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.schedule, color: Colors.blue),
-                  title: Text(availability['status'] == 'available'
-                      ? 'Available at ${availability['time']}'
-                      : 'Unavailable at ${availability['time']}'),
-                ),
-              )),
-        if (events.isNotEmpty)
-          ...events.map((event) => Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.event, color: Colors.green),
-                  title: Text(event['service']!),
-                  subtitle: widget.userRole == 'homeowner'
-                      ? Text('Gardener: ${event['gardener']} at ${event['time']}')
-                      : Text('Client: ${event['client']} at ${event['time']}'),
-                ),
-              )),
-      ],
+      padding: const EdgeInsets.all(8),
+      children: events.map((event) => _buildBookingCard(event)).toList(),
     );
   }
 
-  void _showAddEventDialog(DateTime date) {
-    final TextEditingController timeController = TextEditingController();
-    final TextEditingController clientController = TextEditingController();
-    final TextEditingController serviceController = TextEditingController();
-    final TextEditingController gardenerController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+  Widget _buildBookingCard(Map<String, dynamic> event) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // Add onTap functionality if needed
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: timeController,
-                decoration: const InputDecoration(labelText: 'Time'),
-              ),
-              TextField(
-                controller: clientController,
-                decoration: const InputDecoration(labelText: 'Client'),
-              ),
-              TextField(
-                controller: serviceController,
-                decoration: const InputDecoration(labelText: 'Service'),
-              ),
-              TextField(
-                controller: gardenerController,
-                decoration: const InputDecoration(labelText: 'Gardener'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _events.putIfAbsent(
-                    DateTime.utc(date.year, date.month, date.day),
-                    () => [],
-                  ).add({
-                    'time': timeController.text,
-                    'client': clientController.text,
-                    'service': serviceController.text,
-                    'gardener': gardenerController.text,
-                  });
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showSetAvailabilityDialog(DateTime date) {
-    final TextEditingController timeController = TextEditingController();
-    bool isUnavailable = false;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Set Availability'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: timeController,
-                decoration: const InputDecoration(labelText: 'Time'),
-              ),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Unavailable'),
-                  Checkbox(
-                    value: isUnavailable,
-                    onChanged: (value) {
-                      setState(() {
-                        isUnavailable = value!;
-                      });
-                    },
+                  Text(
+                    event['service'],
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green[800],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(event['status']).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      event['status'].toString().toUpperCase(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _getStatusColor(event['status']),
+                      ),
+                    ),
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              _buildDetailRow(Icons.access_time, event['time']),
+              if (widget.userRole != 'homeowner')
+                _buildDetailRow(Icons.person, 'Client: ${event['client']}'),
+              if (widget.userRole == 'homeowner' && event['gardener'] != 'N/A')
+                _buildDetailRow(Icons.eco, 'Gardener: ${event['gardener']}'),
+              if (widget.userRole == 'homeowner' && event['service_provider'] != 'N/A')
+                _buildDetailRow(Icons.business, 'Service Provider: ${event['service_provider']}'),
+              _buildDetailRow(Icons.location_on, event['address']),
+              if (event['special_instructions'] != null && event['special_instructions'].isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      'Special Instructions',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      event['special_instructions'],
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _availability.putIfAbsent(
-                    DateTime.utc(date.year, date.month, date.day),
-                    () => [],
-                  ).add({
-                    'time': timeController.text,
-                    'status': isUnavailable ? 'unavailable' : 'available',
-                  });
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Set'),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
-}
+
+  Widget _buildDetailRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.green[600]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return Colors.green;
+      case 'accepted':
+        return Colors.blue;
+      case 'pending':
+        return Colors.orange;
+      case 'declined':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+    }
+
+      
+  }

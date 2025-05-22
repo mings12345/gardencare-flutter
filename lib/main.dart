@@ -21,6 +21,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initialize();
       await dotenv.load(fileName: ".env");
+       final userProvider = UserProvider();
+        await userProvider.loadStoredData();
   runApp(
     MultiProvider(
       providers: [

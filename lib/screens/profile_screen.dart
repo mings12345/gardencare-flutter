@@ -20,6 +20,7 @@ class ProfileScreen extends StatefulWidget {
   final String address;
   final String phone;
   final String account;
+  final String? profileImageUrl;
 
   const ProfileScreen({
     Key? key,
@@ -28,6 +29,7 @@ class ProfileScreen extends StatefulWidget {
     required this.address,
     required this.phone,
     required this.account,
+    this.profileImageUrl,
   }) : super(key: key);
 
   @override
@@ -40,19 +42,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late String address;
   late String phone;
   late String account;
+  String? profileImageUrl;
   double balance = 0.0;
 List<dynamic> transactions = [];
 
-  @override
-  void initState() {
-    super.initState();
-    name = widget.name;
-    email = widget.email;
-    address = widget.address;
-    account = widget.account;
-    phone = widget.phone;
-      _loadWalletData();
-  }
+ @override
+void initState() {
+  super.initState();
+  name = widget.name;
+  email = widget.email;
+  address = widget.address;
+  account = widget.account;
+  phone = widget.phone;
+   final userProvider = Provider.of<UserProvider>(context, listen: false);
+  profileImageUrl = userProvider.profileImageUrl ?? widget.profileImageUrl;
+  _loadWalletData();
+}
+
      Future<void> _loadWalletData() async {
   final token = await AuthService.getToken();
   if (token == null) return;
@@ -110,28 +116,30 @@ List<dynamic> transactions = [];
 }
 
   void _editProfile() async {
-    final updatedProfile = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditProfileScreen(
-          name: name,
-          email: email,
-          address: address,
-          phone: phone,
-          account: account,
-        ),
+  final updatedProfile = await Navigator.push<Map<String, dynamic>>(
+    context,
+    MaterialPageRoute(
+      builder: (context) => EditProfileScreen(
+        name: name,
+        email: email,
+        address: address,
+        phone: phone,
+        account: account,
+        profileImageUrl: profileImageUrl,
       ),
-    );
+    ),
+  );
 
-    if (updatedProfile != null) {
-      setState(() {
-        name = updatedProfile['name'];
-        email = updatedProfile['email'];
-        address = updatedProfile['address'];
-        phone = updatedProfile['phone'];
-      });
-    }
+  if (updatedProfile != null) {
+    setState(() {
+      name = updatedProfile['name'] ?? name;
+      email = updatedProfile['email'] ?? email;
+      address = updatedProfile['address'] ?? address;
+      phone = updatedProfile['phone'] ?? phone;
+      profileImageUrl = updatedProfile['profileImageUrl'] ?? profileImageUrl;
+    });
   }
+}
 
     void _openCashInDialog() {
   String amount = '';
@@ -366,7 +374,7 @@ void _showSuccessScreen(String amount, String transactionType) {
     },
   );
 }
-
+  
   void _viewBookingHistory() async {
   try {
     // Get the required data from SharedPreferences
@@ -398,63 +406,96 @@ void _showSuccessScreen(String amount, String transactionType) {
   }
 }
 
-  void _openCalendar() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => const CalendarScreen(
-              userRole: 'homeowner', loggedInUser: '')),
-    );
-  }
+  Future<void> _openCalendar() async {
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => CalendarScreen(
+        userRole: 'homeowner', 
+        loggedInUser: userProvider.name ?? '',
+        userId: (userProvider.userId is int ? userProvider.userId as int : int.tryParse(userProvider.userId.toString()) ?? 0),
+        authToken: token ?? '', // Provide the required authToken here
+      ),
+    ),
+  );
+}
 
   // New method to handle logout
-  void _logout() async {
-  final token = await AuthService.getToken();
-  print("Retrieved Token: $token"); // Debugging: Print the token
-
-  if (token == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("No token found. Please log in again."),
-        duration: Duration(seconds: 2),
-      ),
-    );
-    return;
-  }
-
-  try {
-      final String baseUrl = dotenv.get('BASE_URL'); 
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/logout'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
-    print("Response Body: ${response.body}"); // Debugging: Print response body
-
-    if (response.statusCode == 200) {
-      await AuthService.clearToken();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
+  // New method to handle logout with confirmation dialog
+void _logout() async {
+  // Show confirmation dialog
+  bool? shouldLogout = await showDialog<bool>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       );
-    } else {
+    },
+  );
+
+  // If user confirmed logout
+  if (shouldLogout == true) {
+    final token = await AuthService.getToken();
+    print("Retrieved Token: $token"); // Debugging: Print the token
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No token found. Please log in again."),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final String baseUrl = dotenv.get('BASE_URL'); 
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/logout'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print("Response Status Code: ${response.statusCode}"); // Debugging: Print status code
+      print("Response Body: ${response.body}"); // Debugging: Print response body
+
+      if (response.statusCode == 200) {
+        await AuthService.clearToken();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Failed to logout. Status Code: ${response.statusCode}"),
+          content: Text("Error: $e"),
           duration: const Duration(seconds: 2),
         ),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error: $e"),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 }
 
@@ -472,6 +513,7 @@ void _showSuccessScreen(String amount, String transactionType) {
                   address: userProvider.address ?? '',
                   phone: userProvider.phone ?? '',
                   account: userProvider.account ?? '',
+                  profileImageUrl: profileImageUrl,
                       )), 
           Expanded(
             flex: 5,
@@ -741,13 +783,13 @@ class ProfileInfoCard extends StatelessWidget {
     );
   }
 }
-
 class _TopPortion extends StatelessWidget {
   final String name;
   final String email;
   final String address;
   final String phone;
   final String account;
+  final String? profileImageUrl;
 
   const _TopPortion({
     Key? key,
@@ -756,6 +798,7 @@ class _TopPortion extends StatelessWidget {
     required this.address,
     required this.phone,
     required this.account,
+    this.profileImageUrl,
   }) : super(key: key);
 
   @override
@@ -811,17 +854,29 @@ class _TopPortion extends StatelessWidget {
             ),
           ),
         ),
-        Container(
-          margin: const EdgeInsets.only(top: 50.0),
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: SizedBox(
-              width: 135,
-              height: 130,
-              
+         Container(
+        margin: const EdgeInsets.only(top: 50.0),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: SizedBox(
+            width: 125,
+            height: 120,
+            child: CircleAvatar(
+              radius: 65,
+              backgroundColor: Colors.white,
+              child: CircleAvatar(
+                radius: 60,
+                backgroundImage: profileImageUrl != null
+                    ? NetworkImage(profileImageUrl!)
+                    : null,
+                child: profileImageUrl == null
+                    ? Icon(Icons.person, size: 60, color: Colors.grey)
+                    : null,
+              ),
             ),
           ),
         ),
+      ),
       ],
     );
   }

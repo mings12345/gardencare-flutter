@@ -643,18 +643,24 @@ void _openWithdrawDialog() {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Calendar'),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CalendarScreen(userRole: 'gardener', loggedInUser: ''),
-                  ),
-                ); // Navigate to CalendarScreen
-              },
-            ),
+  leading: const Icon(Icons.calendar_today),
+  title: const Text('Calendar'),
+  onTap: () {
+    Navigator.pop(context); // Close the drawer
+    final user = Provider.of<UserProvider>(context, listen: false);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CalendarScreen(
+          userRole: 'gardener', 
+          loggedInUser: user.name ?? '',
+          userId: (user.userId is int) ? user.userId as int : int.tryParse(user.userId.toString()) ?? 0,
+          authToken: user.token ?? '',
+        ),
+      ),
+    );
+  },
+),
             ListTile(
               leading: const Icon(Icons.notifications),
               title: const Text('Notifications'),
